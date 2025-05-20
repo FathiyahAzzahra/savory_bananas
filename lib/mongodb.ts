@@ -30,7 +30,7 @@ async function dbConnect() {
     };
 
     console.log("Connecting to MongoDB...", MONGODB_URI);
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance: any) => {
       console.log("Connected to MongoDB!");
       return mongooseInstance;
     });

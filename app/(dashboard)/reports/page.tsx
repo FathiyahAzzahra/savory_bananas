@@ -165,6 +165,70 @@ export default function ReportsPage() {
     )
   }
 
+  const handleExport = () => {
+    // Kita bikin data CSV untuk sales report + order history bulan ini
+
+    // Format bulan untuk cari data report
+    const monthStr = format(selectedMonth, "MMMM yyyy", { locale: id })
+
+    // Cari report bulan ini dari reports
+    const report = reports.find(r => r.month === format(selectedMonth, "yyyy-MM"))
+
+    if (!report) {
+      toast({
+        title: "Error",
+        description: "Data laporan untuk bulan ini tidak ditemukan.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Header CSV sales report
+    const salesReportCsv = [
+      ["Laporan Penjualan Bulan", monthStr],
+      [],
+      ["Total Sales", "Total Orders", "Average Order Value"],
+      [report.totalSales, report.totalOrders, report.averageOrderValue],
+    ]
+
+    // Header CSV order history
+    const ordersCsv = [
+      [],
+      ["Riwayat Pesanan"],
+      ["Order ID", "Customer", "Date", "Status", "Payment Status", "Total Price"],
+    ]
+
+    // Data order history
+    monthlyOrders.forEach(order => {
+      ordersCsv.push([
+        order._id,
+        order.customerName,
+        formatDate(order.createdAt),
+        order.status,
+        order.paymentStatus,
+        order.totalPrice.toString(),
+      ])
+    })
+
+    // Gabungkan data CSV jadi satu array
+    const csvData = [...salesReportCsv, ...ordersCsv]
+
+    // Convert array ke string CSV
+    const csvContent = csvData.map(row => row.join(",")).join("\n")
+
+    // Buat blob dan link download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("download", `laporan-${format(selectedMonth, "yyyy-MM")}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+  }
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -173,20 +237,14 @@ export default function ReportsPage() {
           <p className="text-muted-foreground">View and analyze your sales performance</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Select value={year} onValueChange={setYear}>
+          <Select
+            value={selectedMonth.toISOString()}
+            onValueChange={(value) => setSelectedMonth(new Date(value))}
+          >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2025">2025</SelectItem>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2023">2023</SelectItem>
-              <SelectItem value="2022">2022</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedMonth.toISOString()} onValueChange={(value) => setSelectedMonth(new Date(value))}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select month" />
+              <SelectValue>
+                {format(selectedMonth, "MMMM yyyy", { locale: id })}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {monthOptions.map((option) => (
@@ -196,7 +254,18 @@ export default function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <button
+            type="button"
+            onClick={handleExport}
+            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
+          >
+            Export Laporan
+          </button>
+
+
         </div>
+
       </div>
 
       <Tabs defaultValue="monthly-orders" className="space-y-4">
@@ -360,4 +429,5 @@ export default function ReportsPage() {
       </Tabs>
     </div>
   )
+
 }
