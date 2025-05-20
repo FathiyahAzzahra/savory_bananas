@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Main colors from the SavoryBananas logo */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+
+    /* Brown from logo outer ring */
+    --primary: 25 60% 25%;
+    --primary-foreground: 45 100% 75%;
+
+    /* Yellow from logo inner circle */
+    --secondary: 45 100% 65%;
+    --secondary-foreground: 0 0% 10%;
+
+    /* Card styles */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    /* Popover styles */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* Muted styles - light gray with yellow tint */
+    --muted: 45 30% 96%;
+    --muted-foreground: 0 0% 40%;
+
+    /* Accent styles - softer yellow */
+    --accent: 45 80% 90%;
+    --accent-foreground: 0 0% 10%;
+
+    /* Destructive styles */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border styles */
+    --border: 45 30% 90%;
+    --input: 45 30% 90%;
+    --ring: 25 60% 25%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+
+    /* Darker brown for dark mode */
+    --primary: 25 60% 35%;
+    --primary-foreground: 45 100% 75%;
+
+    /* Darker yellow for dark mode */
+    --secondary: 45 70% 50%;
+    --secondary-foreground: 0 0% 10%;
+
+    /* Card styles */
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 98%;
+
+    /* Popover styles */
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Muted styles */
+    --muted: 25 30% 20%;
+    --muted-foreground: 0 0% 70%;
+
+    /* Accent styles */
+    --accent: 45 50% 25%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Destructive styles */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Border styles */
+    --border: 25 30% 25%;
+    --input: 25 30% 25%;
+    --ring: 45 70% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles for better contrast and readability */
+.high-contrast-text {
+  @apply font-medium text-foreground;
+}
+
+.logo-container {
+  background-color: #5d2a0c; /* Brown from logo */
+  color: #ffda44; /* Yellow from logo */
+}
+
+.logo-accent {
+  color: #ffda44; /* Yellow from logo */
+}
+
+.badge-primary {
+  @apply bg-primary text-primary-foreground font-medium;
+}
+
+.badge-secondary {
+  @apply bg-secondary text-secondary-foreground font-medium;
+}
+
+.table-header {
+  @apply bg-muted font-semibold text-foreground;
+}
