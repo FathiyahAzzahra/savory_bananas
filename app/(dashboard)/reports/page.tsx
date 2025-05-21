@@ -26,7 +26,16 @@ export default function ReportsPage() {
       try {
         setIsLoading(true)
         const data = await reportService.getMonthlySales(year)
-        setReports(data)
+        
+        const parsedReports = data.map((r) => ({
+          ...r,
+          totalSales: Number(r.totalSales),
+          totalOrders: Number(r.totalOrders),
+          averageOrderValue: Number(r.averageOrderValue), // opsional, bisa dihitung manual
+        }))
+
+        setReports(parsedReports)
+
       } catch (error) {
         console.error("Failed to fetch reports:", error)
         toast({
@@ -87,8 +96,8 @@ export default function ReportsPage() {
     return format(date, "dd MMMM yyyy", { locale: id })
   }
 
-  const totalSales = reports.reduce((sum, report) => sum + report.totalSales, 0)
-  const totalOrders = reports.reduce((sum, report) => sum + report.totalOrders, 0)
+  const totalSales = reports.reduce((sum, r) => sum + r.totalSales, 0)
+  const totalOrders = reports.reduce((sum, r) => sum + r.totalOrders, 0)
   const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0
 
   const getMonthOptions = () => {
@@ -165,19 +174,27 @@ export default function ReportsPage() {
     )
   }
 
+  const formatRupiah = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(value).replace(/\u00A0/g, " ")
+  }
+
   const handleExport = () => {
     // Kita bikin data CSV untuk sales report + order history bulan ini
 
     // Format bulan untuk cari data report
     const monthStr = format(selectedMonth, "MMMM yyyy", { locale: id })
+    const monthNameEn = format(selectedMonth, "LLLL")
 
     // Cari report bulan ini dari reports
-    const report = reports.find(r => r.month === format(selectedMonth, "yyyy-MM"))
+    const report = reports.find(r => r.month === monthNameEn)
 
     if (!report) {
       toast({
         title: "Error",
-        description: "Data laporan untuk bulan ini tidak ditemukan.",
+        description: 'Data laporan untuk bulan ${monthStr}  ini tidak ditemukan.',
         variant: "destructive",
       })
       return
@@ -188,7 +205,11 @@ export default function ReportsPage() {
       ["Laporan Penjualan Bulan", monthStr],
       [],
       ["Total Sales", "Total Orders", "Average Order Value"],
-      [report.totalSales, report.totalOrders, report.averageOrderValue],
+      [ formatRupiah(report.totalSales),
+        report.totalOrders.toString(),
+        report.totalOrders > 0
+          ? formatRupiah(report.totalSales / report.totalOrders)
+          : "Rp 0,00",],
     ]
 
     // Header CSV order history
@@ -206,7 +227,7 @@ export default function ReportsPage() {
         formatDate(order.createdAt),
         order.status,
         order.paymentStatus,
-        order.totalPrice.toString(),
+        formatRupiah(order.totalPrice),
       ])
     })
 
@@ -214,7 +235,7 @@ export default function ReportsPage() {
     const csvData = [...salesReportCsv, ...ordersCsv]
 
     // Convert array ke string CSV
-    const csvContent = csvData.map(row => row.join(",")).join("\n")
+    const csvContent = csvData.map(row => row.join(";")).join("\n")
 
     // Buat blob dan link download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })

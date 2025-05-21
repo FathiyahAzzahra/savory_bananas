@@ -1,4 +1,4 @@
-// File: D:\Kuliah\Semester 4\Software Development\savory-bananas_4\app\api\auth\[...nextauth]\route.ts
+// File: D:\UAS Softdev\savory_bananas\app\api\auth\[...nextauth]\route.ts
 import * as entry from '../../../../../../app/api/auth/[...nextauth]/route.js'
 import type { NextRequest } from 'next/server.js'
 
