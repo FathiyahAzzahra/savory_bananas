@@ -31,7 +31,35 @@ export const userService = {
   getById: async (id: string) => {
     return fetchAPI<any>(`/users/${id}`)
   },
+  delete: async (id: string) => {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "DELETE",
+    })
+    if (!res.ok) throw new Error("Failed to delete user")
+  },
+  update: async (id: string, userData: {
+    name: string
+    username: string
+    role: string
+  }) => {
+    return fetchAPI<any>(`/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    })
+  },
+  create: async (userData: {
+    name: string
+    username: string
+    password: string
+    role: string
+  }) => {
+    return fetchAPI<any>("/users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    })
+  },
 }
+
 
 // Order API services
 export const orderService = {

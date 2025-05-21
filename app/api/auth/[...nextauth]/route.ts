@@ -12,24 +12,32 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("authorize() called with:", credentials)
+
         if (!credentials?.username || !credentials?.password) {
+          console.log("Missing credentials")
           throw new Error("Please provide username and password")
         }
 
         await dbConnect()
+        console.log("Connected to DB")
 
         const user = await User.findOne({ username: credentials.username })
+        console.log("User from DB:", user)
 
         if (!user) {
+          console.log("No user found")
           throw new Error("Invalid username or password")
         }
 
         const isPasswordValid = await user.comparePassword(credentials.password)
+        console.log("Password valid:", isPasswordValid)
 
         if (!isPasswordValid) {
           throw new Error("Invalid username or password")
         }
 
+        console.log("Login successful, returning user object")
         return {
           id: user._id.toString(),
           name: user.name,
@@ -37,6 +45,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
         }
       },
+
     }),
   ],
   callbacks: {
