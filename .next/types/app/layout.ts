@@ -1,4 +1,4 @@
-// File: D:\Kuliah\Semester 4\Software Development\savory-bananas_4\app\layout.tsx
+// File: D:\UAS Softdev\savory_bananas\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
