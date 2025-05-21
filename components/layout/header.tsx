@@ -1,4 +1,5 @@
 "use client"
+
 import { Bell, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,10 +22,12 @@ interface HeaderProps {
 export function Header({ onLogout, user }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-primary text-primary-foreground shadow-md">
-      <div className="container flex h-16 items-center justify-between py-4">
-        <div className="flex items-center gap-2">
+      <div className="w-full max-w-screen-xl mx-auto px-4 flex h-16 items-center justify-between py-4">
+
+        {/* Kiri - Menu untuk mobile */}
+        <div className="flex items-center gap-2 md:hidden">
           <Sheet>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle Menu</span>
@@ -34,12 +37,15 @@ export function Header({ onLogout, user }: HeaderProps) {
               <Sidebar onLogout={onLogout} user={user} className="border-none" />
             </SheetContent>
           </Sheet>
-
         </div>
-        <div className="hidden md:block">
+
+        {/* Tengah - Title */}
+        <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
           <h1 className="text-xl font-bold text-primary-foreground">Management System</h1>
         </div>
-        <div className="flex items-center gap-4">
+
+        {/* Kanan - Notification dan User */}
+        <div className="flex items-center gap-4 ml-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary/80">
