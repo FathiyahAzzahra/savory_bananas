@@ -228,11 +228,6 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
         </Button>
-        {userRole === "admin" && (
-          <Button onClick={() => router.push(`/orders/${id}/edit`)}>
-            <Edit className="mr-2 h-4 w-4" /> Edit Order
-          </Button>
-        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -269,7 +264,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
             <CardDescription>Update order status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {userRole === "owner" && (
+            {(userRole === "admin" || userRole === "owner") && (
               <div className="space-y-4">
                 {order.status === "Not Yet Processed" && (
                   <Button className="w-full" onClick={() => handleUpdateOrderStatus("Being Sent")}>
@@ -283,9 +278,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                 )}
               </div>
             )}
-            {userRole === "admin" && (
+            {(userRole === "admin" || userRole === "owner") && (
               <div className="space-y-4">
-                {order.paymentStatus === "Not Yet Paid" && (
+                {order.paymentStatus === "Debt" && (
                   <Button className="w-full" onClick={() => handleUpdatePaymentStatus("Paid")}>
                     Mark as Paid
                   </Button>
@@ -297,7 +292,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
             )}
             {((userRole === "owner" && order.status === "Completed") ||
               (userRole === "admin" && order.paymentStatus === "Paid")) && (
-                <div className="text-center py-2 text-muted-foreground">No actions available for this order</div>
+                <div className="text-center py-2 text-muted-foreground">No more actions available for this order</div>
               )}
           </CardContent>
         </Card>

@@ -5,7 +5,9 @@ import Order from "@/models/Order"
 import { authOptions } from "../../../auth/[...nextauth]/route"
 
 // Update order status
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params // ini wajib
+
   try {
     const session = await getServerSession(authOptions)
 
@@ -25,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: "Status is required" }, { status: 400 })
     }
 
-    const order = await Order.findByIdAndUpdate(params.id, { status }, { new: true, runValidators: true })
+    const order = await Order.findByIdAndUpdate((await params).id, { status }, { new: true, runValidators: true })
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })

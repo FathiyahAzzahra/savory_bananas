@@ -102,6 +102,7 @@ export const orderService = {
     })
   },
   updateReceiptUrl: async (id: string, receiptUrl: string) => {
+    console.log("Updating receipt URL for order:", id, receiptUrl)
     return fetchAPI<any>(`/orders/${id}/receipt`, {
       method: "PATCH",
       body: JSON.stringify({ receiptUrl }),

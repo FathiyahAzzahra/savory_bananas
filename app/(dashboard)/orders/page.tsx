@@ -129,7 +129,13 @@ export default function OrdersPage() {
     }
   }
 
-  const getPaymentBadge = (status: string, paymentProofUrl?: string, receiptUrl?: string) => {
+  const handleViewPaymentProof = (imageUrl: string, orderId: string) => {
+    setSelectedProofUrl(imageUrl)
+    setSelectedOrderId(orderId || "")
+    setIsProofViewerOpen(true)
+  }
+
+  const getPaymentBadge = (status: string, paymentProofUrl?: string, receiptUrl?: string, orderId?: string) => {
     const hasProof = paymentProofUrl || receiptUrl
 
     switch (status) {
@@ -139,16 +145,14 @@ export default function OrdersPage() {
             <Badge
               variant="outline"
               className="bg-green-100 text-green-800 border-green-300 font-medium cursor-pointer hover:bg-green-200"
-              onClick={() => hasProof && handleViewPaymentProof(paymentProofUrl || receiptUrl || "", "")}
-            >
+              onClick={() => hasProof && handleViewPaymentProof(paymentProofUrl || receiptUrl || "", orderId || "")}            >
               Paid
             </Badge>
             {hasProof && (
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleViewPaymentProof(paymentProofUrl || receiptUrl || "", "")}
-              >
+                onClick={() => handleViewPaymentProof(paymentProofUrl || receiptUrl || "", orderId || "")}              >
                 <Eye className="h-3 w-3" />
               </Button>
             )}
@@ -167,8 +171,7 @@ export default function OrdersPage() {
               Pending Verification
             </Badge>
             {paymentProofUrl && (
-              <Button size="sm" variant="ghost" onClick={() => handleViewPaymentProof(paymentProofUrl, "")}>
-                <Eye className="h-3 w-3" />
+              <Button size="sm" variant="ghost" onClick={() => handleViewPaymentProof(paymentProofUrl, orderId || "")}>                <Eye className="h-3 w-3" />
               </Button>
             )}
           </div>
@@ -182,11 +185,6 @@ export default function OrdersPage() {
     }
   }
 
-  const handleViewPaymentProof = (imageUrl: string, orderId: string) => {
-    setSelectedProofUrl(imageUrl)
-    setSelectedOrderId(orderId)
-    setIsProofViewerOpen(true)
-  }
 
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
@@ -274,7 +272,7 @@ export default function OrdersPage() {
           <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
           <p className="text-muted-foreground">Manage and track customer orders</p>
         </div>
-        {userRole === "admin" && (
+        {(userRole === "admin" || userRole === "owner") && (
           <Button onClick={() => router.push("/orders/new")}>
             <Plus className="mr-2 h-4 w-4" /> New Order
           </Button>
@@ -361,8 +359,7 @@ export default function OrdersPage() {
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
-                        {getPaymentBadge(order.paymentStatus, order.paymentProofUrl, order.receiptUrl)}
-                      </TableCell>
+                        {getPaymentBadge(order.paymentStatus, order.paymentProofUrl, order.receiptUrl, order._id)}                      </TableCell>
                       <TableCell className="text-right">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -376,31 +373,28 @@ export default function OrdersPage() {
                             <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}`)}>
                               View Details
                             </DropdownMenuItem>
-                            {userRole === "admin" && (
-                              <>
-                                <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}/edit`)}>
-                                  Edit Order
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteOrder(order._id)}>
-                                  Delete Order
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {userRole === "owner" && order.status === "Not Yet Processed" && (
+
+                            {(userRole === "admin" || userRole === "owner") && order.status === "Not Yet Processed" && (
                               <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Being Sent")}>
                                 Mark as Being Sent
                               </DropdownMenuItem>
                             )}
-                            {userRole === "owner" && order.status === "Being Sent" && (
+                            {(userRole === "admin" || userRole === "owner") && order.status === "Being Sent" && (
                               <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Completed")}>
                                 Mark as Completed
                               </DropdownMenuItem>
                             )}
-                            {userRole === "admin" && order.paymentStatus === "Pending Verification" && (
+                            {(userRole === "admin" || userRole === "owner") && order.paymentStatus === "Pending Verification" && (
                               <DropdownMenuItem onClick={() => handleUpdatePaymentStatus(order._id, "Paid")}>
                                 Mark as Paid
                               </DropdownMenuItem>
+                            )}
+                            {(userRole === "admin" || userRole === "owner") && (
+                              <>
+                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteOrder(order._id)}>
+                                  Delete Order
+                                </DropdownMenuItem>
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -899,7 +899,14 @@ export default function CashierPage() {
           <DialogFooter className="flex-col space-y-2">
             <ReceiptGenerator receipt={currentReceipt} onReceiptGenerated={handleReceiptGenerated} />
             <div className="flex gap-2 w-full">
-              <Button variant="outline" onClick={() => setIsReceiptOpen(false)} className="flex-1">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsReceiptOpen(false);
+                  router.push("/orders");  // navigasi ke halaman order
+                }}
+                className="flex-1"
+              >
                 Tutup
               </Button>
               <Button

@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
 
+
   useEffect(() => {
     // Get user role from localStorage
     const user = localStorage.getItem("user")
@@ -52,7 +53,7 @@ export default function DashboardPage() {
         const inDeliveryOrders = filteredOrders.filter((order) => order.status === "Being Sent").length
         const completedOrders = filteredOrders.filter((order) => order.status === "Completed").length
         const paidOrders = filteredOrders.filter((order) => order.paymentStatus === "Paid").length
-        const unpaidOrders = filteredOrders.filter((order) => order.paymentStatus === "Not Yet Paid").length
+        const unpaidOrders = filteredOrders.filter((order) => order.paymentStatus === "Debt").length
 
         setStats({
           totalOrders,
@@ -143,13 +144,16 @@ export default function DashboardPage() {
   // Generate last 6 months for selection
   const getMonthOptions = () => {
     const options = []
-    for (let i = 0; i < 6; i++) {
-      const date = subMonths(new Date(), i)
+    const now = new Date()
+
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i)
       options.push({
-        value: date.toISOString(),
         label: format(date, "MMMM yyyy", { locale: id }),
+        value: format(date, "yyyy-MM"),
       })
     }
+
     return options
   }
 
@@ -172,12 +176,18 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedMonth.toISOString()} onValueChange={(value) => setSelectedMonth(new Date(value))}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select month" />
+          <Select
+            value={format(selectedMonth, "yyyy-MM")}
+            onValueChange={(value) => {
+              const [year, month] = value.split("-")
+              setSelectedMonth(new Date(Number(year), Number(month) - 1))
+            }}
+          >
+            <SelectTrigger className="w-[200px] border-cokelatTua bg-white text-cokelatTua shadow-md">
+              <SelectValue placeholder="Pilih bulan" />
             </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map((option) => (
+            <SelectContent className="bg-white text-cokelatTua max-h-[200px] overflow-y-auto">
+              {getMonthOptions().map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
