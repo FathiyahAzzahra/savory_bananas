@@ -1,10 +1,11 @@
-import mongoose, { type Document, type Model } from "mongoose"
+import mongoose from "mongoose"
 
-export interface IStock extends Document {
+export interface IStock extends mongoose.Document {
   name: string
   quantity: number
   unit: string
   price: number
+  imageUrl?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -31,10 +32,13 @@ const StockSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    imageUrl: {
+      type: String,
+    },
   },
   { timestamps: true },
 )
 
-const Stock: Model<IStock> = mongoose.models.Stock || mongoose.model<IStock>("Stock", StockSchema)
+const Stock = mongoose.models.Stock || mongoose.model<IStock>("Stock", StockSchema)
 
 export default Stock
