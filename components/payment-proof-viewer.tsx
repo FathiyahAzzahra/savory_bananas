@@ -1,8 +1,6 @@
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
 
 interface PaymentProofViewerProps {
     isOpen: boolean
@@ -16,12 +14,7 @@ export function PaymentProofViewer({ isOpen, onClose, imageUrl, orderId }: Payme
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center justify-between">
-                        Payment Proof - Order #{orderId}
-                        <Button variant="ghost" size="icon" onClick={onClose}>
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </DialogTitle>
+                    <DialogTitle>Payment Proof - Order #{orderId}</DialogTitle>
                 </DialogHeader>
                 <div className="flex justify-center">
                     <img

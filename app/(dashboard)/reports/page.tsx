@@ -12,6 +12,7 @@ import { id } from "date-fns/locale"
 import { reportService, orderService } from "@/lib/api-services"
 import { useToast } from "@/components/ui/use-toast"
 import type { SalesReport, Order } from "@/lib/types"
+import { useSession } from "next-auth/react"
 
 export default function ReportsPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString())
@@ -20,13 +21,17 @@ export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
   const [monthlyOrders, setMonthlyOrders] = useState<Order[]>([])
   const { toast } = useToast()
+  const { data: session } = useSession()
+
+  const userRole = session?.user?.role
+
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         setIsLoading(true)
         const data = await reportService.getMonthlySales(year)
-        
+
         const parsedReports = data.map((r) => ({
           ...r,
           totalSales: Number(r.totalSales),
@@ -205,11 +210,11 @@ export default function ReportsPage() {
       ["Laporan Penjualan Bulan", monthStr],
       [],
       ["Total Sales", "Total Orders", "Average Order Value"],
-      [ formatRupiah(report.totalSales),
-        report.totalOrders.toString(),
-        report.totalOrders > 0
-          ? formatRupiah(report.totalSales / report.totalOrders)
-          : "Rp 0,00",],
+      [formatRupiah(report.totalSales),
+      report.totalOrders.toString(),
+      report.totalOrders > 0
+        ? formatRupiah(report.totalSales / report.totalOrders)
+        : "Rp 0,00",],
     ]
 
     // Header CSV order history
@@ -276,13 +281,16 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
-          >
-            Export Laporan
-          </button>
+          {userRole === "owner" && (
+            <button
+              type="button"
+              onClick={handleExport}
+              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
+            >
+              Export Laporan
+            </button>
+          )}
+
 
 
         </div>

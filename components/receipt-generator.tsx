@@ -1,5 +1,5 @@
 "use client"
-import { useRef } from "react"
+import { useRef, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
 import { uploadImageToCloudinary } from "@/lib/cloudinary"
@@ -33,6 +33,8 @@ interface ReceiptGeneratorProps {
 
 export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGeneratorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const [isUploading, setIsUploading] = useState(false)
+    const [isUploaded, setIsUploaded] = useState(false)
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat("id-ID", {
@@ -44,10 +46,10 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
 
     const generateReceiptImage = async () => {
         const canvas = canvasRef.current
-        if (!canvas) return
+        if (!canvas) return null
 
         const ctx = canvas.getContext("2d")
-        if (!ctx) return
+        if (!ctx) return null
 
         // Set canvas size
         canvas.width = 400
@@ -161,12 +163,58 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
         return canvas
     }
 
+    // Automatically generate and upload receipt when component mounts
+    useEffect(() => {
+        if (receipt && !isUploaded && !isUploading) {
+            uploadReceiptToCloudinary()
+        }
+    }, [receipt])
+
+    const uploadReceiptToCloudinary = async () => {
+        if (!receipt || isUploading || isUploaded) return
+
+        setIsUploading(true)
+
+        try {
+            const canvas = await generateReceiptImage()
+            if (!canvas) {
+                console.error("Failed to generate receipt image")
+                return
+            }
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    console.error("Failed to create blob from canvas")
+                    setIsUploading(false)
+                    return
+                }
+
+                try {
+                    const file = new File([blob], `receipt-${receipt.receiptId}.png`, { type: "image/png" })
+                    const imageUrl = await uploadImageToCloudinary(file)
+
+                    if (imageUrl && onReceiptGenerated) {
+                        onReceiptGenerated(imageUrl)
+                        setIsUploaded(true)
+                    }
+                } catch (error) {
+                    console.error("Failed to upload receipt:", error)
+                } finally {
+                    setIsUploading(false)
+                }
+            }, "image/png")
+        } catch (error) {
+            console.error("Error generating receipt:", error)
+            setIsUploading(false)
+        }
+    }
+
     const downloadReceipt = async () => {
         const canvas = await generateReceiptImage()
         if (!canvas) return
 
         // Convert canvas to blob
-        canvas.toBlob(async (blob) => {
+        canvas.toBlob((blob) => {
             if (!blob) return
 
             // Create download link
@@ -178,28 +226,15 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
             a.click()
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
-
-            // Upload to Cloudinary if callback provided
-            if (onReceiptGenerated) {
-                try {
-                    const file = new File([blob], `receipt-${receipt.receiptId}.png`, { type: "image/png" })
-                    const imageUrl = await uploadImageToCloudinary(file)
-                    if (imageUrl) {
-                        onReceiptGenerated(imageUrl)
-                    }
-                } catch (error) {
-                    console.error("Failed to upload receipt:", error)
-                }
-            }
         }, "image/png")
     }
 
     return (
         <div>
             <canvas ref={canvasRef} style={{ display: "none" }} />
-            <Button onClick={downloadReceipt} className="w-full">
+            <Button onClick={downloadReceipt} className="w-full" disabled={isUploading}>
                 <Download className="mr-2 h-4 w-4" />
-                Download Receipt
+                {isUploading ? "Generating Receipt..." : "Download Receipt"}
             </Button>
         </div>
     )

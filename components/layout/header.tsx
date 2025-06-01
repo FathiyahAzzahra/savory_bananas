@@ -22,7 +22,7 @@ interface HeaderProps {
 export function Header({ onLogout, user }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-primary text-primary-foreground shadow-md">
-      <div className="w-full max-w-screen-xl mx-auto px-4 flex h-16 items-center justify-between py-4">
+      <div className="w-full max-w-screen-xl mx-auto px-4 h-16 flex items-center justify-between py-4">
 
         {/* Kiri - Menu untuk mobile */}
         <div className="flex items-center gap-2 md:hidden">
@@ -40,8 +40,10 @@ export function Header({ onLogout, user }: HeaderProps) {
         </div>
 
         {/* Tengah - Title */}
-        <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
-          <h1 className="text-xl font-bold text-primary-foreground">Management System</h1>
+        <div className="flex-1 flex justify-center md:justify-center">
+          <h1 className="text-lg md:text-xl font-bold text-primary-foreground whitespace-nowrap text-center">
+            Management System
+          </h1>
         </div>
 
         {/* Kanan - Notification dan User */}
@@ -59,6 +61,7 @@ export function Header({ onLogout, user }: HeaderProps) {
               <DropdownMenuItem>No new notifications</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 text-primary-foreground hover:bg-primary/80">

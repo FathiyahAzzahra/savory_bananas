@@ -176,6 +176,7 @@ export default function StockPage() {
   }
 
   const isAdmin = session?.user?.role === "admin"
+  const isOwner = session?.user?.role === "owner"
 
   return (
     <div className="space-y-6">
@@ -184,7 +185,7 @@ export default function StockPage() {
           <h2 className="text-3xl font-bold tracking-tight">Stock Management</h2>
           <p className="text-muted-foreground">Manage and track inventory levels</p>
         </div>
-        {isAdmin && (
+        {(isAdmin || isOwner) && (
           <Dialog
             open={isAddDialogOpen}
             onOpenChange={(open) => {

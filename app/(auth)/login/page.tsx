@@ -61,10 +61,8 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-muted">
       <div className="w-full max-w-md px-4">
         <div className="flex flex-col items-center mb-8">
-          <div className="rounded-full bg-primary p-3 mb-4">
-            <div className="rounded-full bg-secondary p-2 w-16 h-16 flex items-center justify-center">
-              <span className="font-bold text-secondary-foreground text-2xl">SB</span>
-            </div>
+          <div className="rounded-full w-24 h-24 flex items-center justify-center">
+            <img src="/logo_SavoryBananas.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
           </div>
           <h1 className="text-2xl font-bold text-center">SavoryBananas</h1>
           <p className="text-muted-foreground text-center mt-1">Banana Chips Order Management</p>
