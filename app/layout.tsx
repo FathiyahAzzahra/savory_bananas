@@ -11,7 +11,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "SavoryBananas - Order Management",
   description: "Order management system for SavoryBananas UMKM",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({

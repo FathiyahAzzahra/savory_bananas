@@ -36,11 +36,29 @@ export async function POST(req: NextRequest) {
 
     await dbConnect()
 
-    const { customerName, products, totalPrice, status, paymentStatus } = await req.json()
+    const {
+      customerName,
+      products,
+      totalPrice,
+      status,
+      paymentStatus,
+      paymentMethod,
+      paymentProofUrl,
+      receiptUrl,
+      discount,
+      cashReceived,
+      change,
+      receiptId,
+    } = await req.json()
 
     // Validate input
     if (!customerName || !products || products.length === 0) {
       return NextResponse.json({ error: "Please provide customer name and products" }, { status: 400 })
+    }
+
+    // Validate payment proof for transfer payments
+    if (paymentMethod === "transfer" && !paymentProofUrl) {
+      return NextResponse.json({ error: "Payment proof is required for transfer payments" }, { status: 400 })
     }
 
     // Check stock availability and update stock
@@ -69,7 +87,14 @@ export async function POST(req: NextRequest) {
       products,
       totalPrice,
       status: status || "Not Yet Processed",
-      paymentStatus: paymentStatus || "Not Yet Paid",
+      paymentStatus: paymentStatus || "Pending Verification",
+      paymentMethod,
+      paymentProofUrl,
+      receiptUrl,
+      discount,
+      cashReceived,
+      change,
+      receiptId,
     })
 
     return NextResponse.json(order, { status: 201 })

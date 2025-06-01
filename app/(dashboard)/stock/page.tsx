@@ -24,9 +24,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Plus, MoreHorizontal, Search, AlertTriangle } from "lucide-react"
+import { Plus, MoreHorizontal, Search, ImageIcon, AlertTriangle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { stockService } from "@/lib/api-services"
+import { ProductImageUpload } from "@/components/product-image-upload"
 import type { Stock } from "@/lib/types"
 import { useSession } from "next-auth/react"
 
@@ -41,20 +42,20 @@ export default function StockPage() {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0) // ✅ Added this line
 
-  // Form state for new stock
   const [newStock, setNewStock] = useState({
     name: "",
     quantity: 0,
     unit: "",
     price: 0,
+    imageUrl: "",
   })
 
-  // Form state for updating stock quantity
   const [updateQuantity, setUpdateQuantity] = useState(0)
 
   useEffect(() => {
-    // Fetch stock
     const fetchStock = async () => {
       try {
         setIsLoading(true)
@@ -62,7 +63,6 @@ export default function StockPage() {
         setStock(data)
         setFilteredStock(data)
       } catch (error) {
-        console.error("Failed to fetch stock:", error)
         toast({
           title: "Error",
           description: "Failed to load stock items. Please try again.",
@@ -77,43 +77,45 @@ export default function StockPage() {
   }, [toast])
 
   useEffect(() => {
-    // Filter stock based on search term
     if (searchTerm) {
-      const filtered = stock.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = stock.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
       setFilteredStock(filtered)
     } else {
       setFilteredStock(stock)
     }
   }, [searchTerm, stock])
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price)
+
+  const resetNewStockForm = () => {
+    setNewStock({
+      name: "",
+      quantity: 0,
+      unit: "",
+      price: 0,
+      imageUrl: "",
+    })
+    setUploadProgress(0)
   }
 
   const handleAddStock = async () => {
     try {
       const response = await stockService.create(newStock)
-
-      // Update local state
       setStock([...stock, response])
       setIsAddDialogOpen(false)
-      setNewStock({
-        name: "",
-        quantity: 0,
-        unit: "",
-        price: 0,
-      })
-
+      resetNewStockForm()
       toast({
         title: "Stock added",
         description: `${newStock.name} has been added to stock.`,
       })
     } catch (error) {
-      console.error("Failed to add stock:", error)
       toast({
         title: "Error",
         description: "Failed to add stock item. Please try again.",
@@ -127,29 +129,20 @@ export default function StockPage() {
 
     try {
       await stockService.updateQuantity(selectedStock._id, updateQuantity)
-
-      // Update local state
-      const updatedStock = stock.map((item) => {
-        if (item._id === selectedStock._id) {
-          return {
-            ...item,
-            quantity: updateQuantity,
-          }
-        }
-        return item
-      })
-
+      const updatedStock = stock.map((item) =>
+        item._id === selectedStock._id
+          ? { ...item, quantity: updateQuantity }
+          : item
+      )
       setStock(updatedStock)
       setIsUpdateDialogOpen(false)
       setSelectedStock(null)
       setUpdateQuantity(0)
-
       toast({
         title: "Stock updated",
         description: `${selectedStock.name} quantity has been updated.`,
       })
     } catch (error) {
-      console.error("Failed to update stock:", error)
       toast({
         title: "Error",
         description: "Failed to update stock quantity. Please try again.",
@@ -159,23 +152,15 @@ export default function StockPage() {
   }
 
   const handleDeleteStock = async (stockId: string) => {
-    if (!confirm("Are you sure you want to delete this stock item?")) {
-      return
-    }
-
+    if (!confirm("Are you sure you want to delete this stock item?")) return
     try {
       await stockService.delete(stockId)
-
-      // Update local state
-      const updatedStock = stock.filter((item) => item._id !== stockId)
-      setStock(updatedStock)
-
+      setStock(stock.filter((item) => item._id !== stockId))
       toast({
         title: "Stock deleted",
         description: "Stock item has been deleted",
       })
     } catch (error) {
-      console.error("Failed to delete stock:", error)
       toast({
         title: "Error",
         description: "Failed to delete stock item. Please try again.",
@@ -200,32 +185,67 @@ export default function StockPage() {
           <p className="text-muted-foreground">Manage and track inventory levels</p>
         </div>
         {isAdmin && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog
+            open={isAddDialogOpen}
+            onOpenChange={(open) => {
+              setIsAddDialogOpen(open)
+              if (!open) resetNewStockForm()
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add Stock
-              </Button>
+              <Button><Plus className="mr-2 h-4 w-4" /> Add Stock</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Stock</DialogTitle>
                 <DialogDescription>Enter the details for the new stock item.</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-6 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Item Name</Label>
                   <Input
                     id="name"
+                    placeholder="Masukkan nama produk"
                     value={newStock.name}
                     onChange={(e) => setNewStock({ ...newStock, name: e.target.value })}
                   />
                 </div>
+
+                <ProductImageUpload
+                  onUploadComplete={(imageUrl: string) => {
+                    setNewStock({ ...newStock, imageUrl })
+                    setIsUploadingImage(false)
+                    setUploadProgress(100) // You can customize this if using actual progress
+                  }}
+                  onUploadStart={() => {
+                    setIsUploadingImage(true)
+                    setUploadProgress(0)
+                  }}
+                  onUploadError={() => {
+                    setIsUploadingImage(false)
+                    setUploadProgress(0)
+                  }}
+                  currentImageUrl={newStock.imageUrl}
+                  onRemoveImage={() => setNewStock({ ...newStock, imageUrl: "" })}
+                  disabled={isUploadingImage}
+                />
+
+                {isUploadingImage && (
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="quantity">Quantity</Label>
                     <Input
                       id="quantity"
                       type="number"
+                      placeholder="0"
                       value={newStock.quantity}
                       onChange={(e) => setNewStock({ ...newStock, quantity: Number(e.target.value) })}
                     />
@@ -234,6 +254,7 @@ export default function StockPage() {
                     <Label htmlFor="unit">Unit</Label>
                     <Input
                       id="unit"
+                      placeholder="pcs, kg, liter, dll"
                       value={newStock.unit}
                       onChange={(e) => setNewStock({ ...newStock, unit: e.target.value })}
                     />
@@ -244,16 +265,26 @@ export default function StockPage() {
                   <Input
                     id="price"
                     type="number"
+                    placeholder="0"
                     value={newStock.price}
                     onChange={(e) => setNewStock({ ...newStock, price: Number(e.target.value) })}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={handleAddStock}
+                  disabled={
+                    isUploadingImage ||
+                    !newStock.name.trim() ||
+                    newStock.quantity < 0 ||
+                    !newStock.unit.trim() ||
+                    newStock.price < 0
+                  }
+                >
+                  Add Stock
                 </Button>
-                <Button onClick={handleAddStock}>Add Stock</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -281,6 +312,7 @@ export default function StockPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Image</TableHead>
                   <TableHead>Item Name</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit</TableHead>
@@ -290,92 +322,83 @@ export default function StockPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      Loading stock items...
+                {filteredStock.map((item) => (
+                  <TableRow key={item._id}>
+                    <TableCell>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="h-12 w-12 object-cover rounded-md" />
+                      ) : (
+                        <div className="flex items-center justify-center h-12 w-12 bg-muted rounded-md">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell>{formatPrice(item.price)}</TableCell>
+                    <TableCell>
+                      {item.quantity === 0 ? (
+                        <span className="text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" /> Out of stock
+                        </span>
+                      ) : (
+                        <span className="text-green-600">Available</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => openUpdateDialog(item)}>Edit Quantity</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDeleteStock(item._id)} className="text-red-600">
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ) : filteredStock.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      No stock items found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredStock.map((item) => (
-                    <TableRow key={item._id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>{formatPrice(item.price)}</TableCell>
-                      <TableCell>
-                        {item.quantity < 10 ? (
-                          <div className="flex items-center text-amber-600">
-                            <AlertTriangle className="mr-1 h-4 w-4" />
-                            Low Stock
-                          </div>
-                        ) : (
-                          <div className="text-green-600">In Stock</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => openUpdateDialog(item)}>Update Quantity</DropdownMenuItem>
-                            {isAdmin && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteStock(item._id)}>
-                                  Delete Item
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Update Stock Dialog */}
+      {/* Dialog for updating quantity */}
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update Stock Quantity</DialogTitle>
-            <DialogDescription>Update the quantity for {selectedStock?.name}.</DialogDescription>
+            <DialogDescription>
+              Update quantity for <strong>{selectedStock?.name}</strong>
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={updateQuantity}
-                onChange={(e) => setUpdateQuantity(Number(e.target.value))}
-              />
-            </div>
+            <Label htmlFor="update-quantity">Quantity</Label>
+            <Input
+              id="update-quantity"
+              type="number"
+              value={updateQuantity}
+              onChange={(e) => setUpdateQuantity(Number(e.target.value))}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateStock}>Update Stock</Button>
+            <Button onClick={handleUpdateStock}>Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
+
 }

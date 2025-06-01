@@ -101,6 +101,12 @@ export const orderService = {
       body: JSON.stringify({ paymentStatus }),
     })
   },
+  updateReceiptUrl: async (id: string, receiptUrl: string) => {
+    return fetchAPI<any>(`/orders/${id}/receipt`, {
+      method: "PATCH",
+      body: JSON.stringify({ receiptUrl }),
+    })
+  },
 }
 
 // Stock API services

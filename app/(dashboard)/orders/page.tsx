@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react" // Import useSession dari next-auth
+import { useSession } from "next-auth/react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MoreHorizontal, Search } from "lucide-react"
+import { Plus, MoreHorizontal, Search, Eye } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { orderService } from "@/lib/api-services"
+import { PaymentProofViewer } from "@/components/payment-proof-viewer"
 import type { Order } from "@/lib/types"
 
 export default function OrdersPage() {
@@ -30,14 +31,15 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [paymentFilter, setPaymentFilter] = useState("all")
-  const { data: session } = useSession() // Mengambil session dari NextAuth.js
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedProofUrl, setSelectedProofUrl] = useState("")
+  const [selectedOrderId, setSelectedOrderId] = useState("")
+  const [isProofViewerOpen, setIsProofViewerOpen] = useState(false)
 
-  // Ambil role dari session, pastikan session sudah terambil
-  const userRole = session?.user?.role // Pastikan properti 'role' ada di session
+  const userRole = session?.user?.role
 
   useEffect(() => {
-    // Fetch orders
     const fetchOrders = async () => {
       try {
         setIsLoading(true)
@@ -60,7 +62,6 @@ export default function OrdersPage() {
   }, [toast])
 
   useEffect(() => {
-    // Filter orders based on search term and filters
     let result = orders
 
     if (searchTerm) {
@@ -128,19 +129,49 @@ export default function OrdersPage() {
     }
   }
 
-  const getPaymentBadge = (status: string) => {
+  const getPaymentBadge = (status: string, paymentProofUrl?: string, receiptUrl?: string) => {
+    const hasProof = paymentProofUrl || receiptUrl
+
     switch (status) {
       case "Paid":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 font-medium">
-            Paid
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="bg-green-100 text-green-800 border-green-300 font-medium cursor-pointer hover:bg-green-200"
+              onClick={() => hasProof && handleViewPaymentProof(paymentProofUrl || receiptUrl || "", "")}
+            >
+              Paid
+            </Badge>
+            {hasProof && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleViewPaymentProof(paymentProofUrl || receiptUrl || "", "")}
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        )
+      case "Debt":
+        return (
+          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 font-medium">
+            Debt
           </Badge>
         )
-      case "Not Yet Paid":
+      case "Pending Verification":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 font-medium">
-            Not Yet Paid
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 font-medium">
+              Pending Verification
+            </Badge>
+            {paymentProofUrl && (
+              <Button size="sm" variant="ghost" onClick={() => handleViewPaymentProof(paymentProofUrl, "")}>
+                <Eye className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         )
       default:
         return (
@@ -151,11 +182,16 @@ export default function OrdersPage() {
     }
   }
 
+  const handleViewPaymentProof = (imageUrl: string, orderId: string) => {
+    setSelectedProofUrl(imageUrl)
+    setSelectedOrderId(orderId)
+    setIsProofViewerOpen(true)
+  }
+
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
       await orderService.updateStatus(orderId, status)
 
-      // Update local state
       const updatedOrders = orders.map((order) => {
         if (order._id === orderId) {
           return { ...order, status }
@@ -183,7 +219,6 @@ export default function OrdersPage() {
     try {
       await orderService.updatePaymentStatus(orderId, paymentStatus)
 
-      // Update local state
       const updatedOrders = orders.map((order) => {
         if (order._id === orderId) {
           return { ...order, paymentStatus }
@@ -215,7 +250,6 @@ export default function OrdersPage() {
     try {
       await orderService.delete(orderId)
 
-      // Update local state
       const updatedOrders = orders.filter((order) => order._id !== orderId)
       setOrders(updatedOrders)
 
@@ -280,7 +314,8 @@ export default function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">All Payments</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Not Yet Paid">Not Yet Paid</SelectItem>
+                <SelectItem value="Debt">Debt</SelectItem>
+                <SelectItem value="Pending Verification">Pending Verification</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -319,29 +354,53 @@ export default function OrdersPage() {
                           onClick={() => router.push(`/orders/${order._id}`)}
                           className="text-primary underline hover:opacity-80 transition"
                         >
-                          {order._id}
+                          #{order._id.slice(-8)}
                         </button>
                       </TableCell>
                       <TableCell>{order.customerName}</TableCell>
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
-                      <TableCell>{getPaymentBadge(order.paymentStatus)}</TableCell>
+                      <TableCell>
+                        {getPaymentBadge(order.paymentStatus, order.paymentProofUrl, order.receiptUrl)}
+                      </TableCell>
                       <TableCell className="text-right">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="link" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}`)}>
+                              View Details
+                            </DropdownMenuItem>
                             {userRole === "admin" && (
                               <>
-                                <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Completed")}>
-                                  Mark as Completed
+                                <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}/edit`)}>
+                                  Edit Order
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteOrder(order._id)}>Delete</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteOrder(order._id)}>
+                                  Delete Order
+                                </DropdownMenuItem>
                               </>
+                            )}
+                            {userRole === "owner" && order.status === "Not Yet Processed" && (
+                              <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Being Sent")}>
+                                Mark as Being Sent
+                              </DropdownMenuItem>
+                            )}
+                            {userRole === "owner" && order.status === "Being Sent" && (
+                              <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Completed")}>
+                                Mark as Completed
+                              </DropdownMenuItem>
+                            )}
+                            {userRole === "admin" && order.paymentStatus === "Pending Verification" && (
+                              <DropdownMenuItem onClick={() => handleUpdatePaymentStatus(order._id, "Paid")}>
+                                Mark as Paid
+                              </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -354,6 +413,13 @@ export default function OrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PaymentProofViewer
+        isOpen={isProofViewerOpen}
+        onClose={() => setIsProofViewerOpen(false)}
+        imageUrl={selectedProofUrl}
+        orderId={selectedOrderId}
+      />
     </div>
   )
 }

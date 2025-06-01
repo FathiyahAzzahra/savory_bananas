@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     await dbConnect()
 
-    const { name, quantity, unit, price } = await req.json()
+    const { name, quantity, unit, price, imageUrl } = await req.json()
 
     // Validate input
     if (!name || quantity === undefined || !unit || price === undefined) {
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       quantity,
       unit,
       price,
+      imageUrl,
     })
 
     return NextResponse.json(stock, { status: 201 })
