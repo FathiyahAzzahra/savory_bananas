@@ -1,5 +1,6 @@
 "use client"
 
+
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -101,6 +102,42 @@ export default function OrdersPage() {
 
     setFilteredOrders(result)
   }, [searchTerm, statusFilter, paymentFilter, orders])
+
+  const openUploadDialog = (orderId: string) => {
+    setSelectedOrderId(orderId)
+    setIsDialogOpen(true)
+  }
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedOrderId) return
+  
+    try {
+      // Contoh upload file ke API (ganti sesuai implementasi backend)
+      await orderService.uploadCompletionProof(selectedOrderId, file)
+  
+      toast({
+        title: "Upload success",
+        description: "Completion proof uploaded successfully.",
+      })
+  
+      // Refresh data order setelah upload, misal fetch ulang orders
+      const data = await orderService.getAll()
+      setOrders(data)
+      setFilteredOrders(data)
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload completion proof. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDialogOpen(false)
+      setSelectedOrderId(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -504,6 +541,8 @@ export default function OrdersPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
+                  <TableHead>Payment Proof</TableHead>
+                  <TableHead>Completion Proof</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -511,13 +550,13 @@ export default function OrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                       No orders found.
                     </TableCell>
                   </TableRow>
@@ -535,9 +574,11 @@ export default function OrdersPage() {
                       <TableCell>{order.customerName}</TableCell>
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+
                       <TableCell>
                         {getPaymentBadge(order.paymentStatus, order.paymentProofUrl, order.receiptUrl, order._id)}
                       </TableCell>
+
                       <TableCell className="text-right">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -616,6 +657,18 @@ export default function OrdersPage() {
                                 )}
                               </>
                             )}
+
+                            {/* Tombol Upload Completion Proof */}
+                            {userRole === "admin" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mr-2"
+                                onClick={() => openUploadDialog(order._id)}
+                              >
+                                Upload Completion Proof
+                              </Button>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -623,6 +676,7 @@ export default function OrdersPage() {
                   ))
                 )}
               </TableBody>
+              
             </Table>
           </div>
         </CardContent>
