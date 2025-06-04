@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react" // Import useSession dari next-auth
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -21,6 +21,7 @@ import { Plus, MoreHorizontal, Search } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { orderService } from "@/lib/api-services"
 import type { Order } from "@/lib/types"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -33,6 +34,15 @@ export default function OrdersPage() {
   const { data: session } = useSession() // Mengambil session dari NextAuth.js
   const [isLoading, setIsLoading] = useState(true)
 
+<<<<<<< Updated upstream
+=======
+  // Tambahan untuk modal upload completion proof
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+
+>>>>>>> Stashed changes
   // Ambil role dari session, pastikan session sudah terambil
   const userRole = session?.user?.role // Pastikan properti 'role' ada di session
 
@@ -81,6 +91,42 @@ export default function OrdersPage() {
 
     setFilteredOrders(result)
   }, [searchTerm, statusFilter, paymentFilter, orders])
+
+  const openUploadDialog = (orderId: string) => {
+    setSelectedOrderId(orderId)
+    setIsDialogOpen(true)
+  }
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedOrderId) return
+  
+    try {
+      // Contoh upload file ke API (ganti sesuai implementasi backend)
+      await orderService.uploadCompletionProof(selectedOrderId, file)
+  
+      toast({
+        title: "Upload success",
+        description: "Completion proof uploaded successfully.",
+      })
+  
+      // Refresh data order setelah upload, misal fetch ulang orders
+      const data = await orderService.getAll()
+      setOrders(data)
+      setFilteredOrders(data)
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload completion proof. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDialogOpen(false)
+      setSelectedOrderId(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -294,6 +340,8 @@ export default function OrdersPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
+                  <TableHead>Payment Proof</TableHead>
+                  <TableHead>Completion Proof</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -301,13 +349,13 @@ export default function OrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                       No orders found.
                     </TableCell>
                   </TableRow>
@@ -326,6 +374,39 @@ export default function OrdersPage() {
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>{getPaymentBadge(order.paymentStatus)}</TableCell>
+<<<<<<< Updated upstream
+=======
+                      <TableCell>
+                        {order.paymentProofUrl ? (
+                          <a
+                            href={order.paymentProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 underline"
+                          >
+                            Lihat
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell> {/* ← PENUTUP yang sebelumnya hilang */}
+
+                      <TableCell>
+                        {order.completionProofUrl ? (
+                          <a
+                            href={order.completionProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 underline"
+                          >
+                            Lihat
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+
+>>>>>>> Stashed changes
                       <TableCell className="text-right">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -343,6 +424,18 @@ export default function OrdersPage() {
                                 <DropdownMenuItem onClick={() => handleDeleteOrder(order._id)}>Delete</DropdownMenuItem>
                               </>
                             )}
+
+                            {/* Tombol Upload Completion Proof */}
+                            {userRole === "admin" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mr-2"
+                                onClick={() => openUploadDialog(order._id)}
+                              >
+                                Upload Completion Proof
+                              </Button>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -350,10 +443,33 @@ export default function OrdersPage() {
                   ))
                 )}
               </TableBody>
+              
             </Table>
           </div>
         </CardContent>
       </Card>
+<<<<<<< Updated upstream
+=======
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Upload Completion Proof</DialogTitle>
+                      </DialogHeader>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*,application/pdf"
+                        onChange={handleFileChange}
+                        className="my-4"
+                      />
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+>>>>>>> Stashed changes
     </div>
   )
 }

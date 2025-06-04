@@ -12,6 +12,8 @@ import { id } from "date-fns/locale"
 import { reportService, orderService } from "@/lib/api-services"
 import { useToast } from "@/components/ui/use-toast"
 import type { SalesReport, Order } from "@/lib/types"
+import { useSession } from "next-auth/react"
+
 
 export default function ReportsPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString())
@@ -20,13 +22,52 @@ export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
   const [monthlyOrders, setMonthlyOrders] = useState<Order[]>([])
   const { toast } = useToast()
+  const { data: session } = useSession()
+
+  const userRole = session?.user?.role
+
+  function aggregateMonthlyReports(orders: Order[], year: number) {
+    // Buat array 12 bulan kosong dulu
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+      month: format(new Date(year, i), "LLLL", { locale: id }).toLowerCase(),
+      totalSales: 0,
+      totalOrders: 0,
+      averageOrderValue: 0,
+    }))
+
+    // Filter orders hanya yang completed dan tahun sesuai
+    const completedOrders = orders.filter(order => {
+      const date = new Date(order.createdAt)
+      return order.status === "Completed" && date.getFullYear() === year
+    })
+
+    // Hitung per bulan
+    completedOrders.forEach(order => {
+      const monthIndex = new Date(order.createdAt).getMonth()
+      monthlyData[monthIndex].totalSales += order.totalPrice
+      monthlyData[monthIndex].totalOrders += 1
+    })
+
+    // Hitung average order value per bulan
+    monthlyData.forEach((data) => {
+      if (data.totalOrders > 0) {
+        data.averageOrderValue = data.totalSales / data.totalOrders
+      }
+    })
+
+    return monthlyData
+  }
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchOrdersForYear = async () => {
       try {
         setIsLoading(true)
+        const allOrders = await orderService.getAll()
         const data = await reportService.getMonthlySales(year)
-        
+
+        // Hitung laporan berdasarkan orders yang completed di tahun yang dipilih
+        const monthlyReportsData = aggregateMonthlyReports(allOrders, Number(year))
+
         const parsedReports = data.map((r) => ({
           ...r,
           totalSales: Number(r.totalSales),
@@ -34,10 +75,9 @@ export default function ReportsPage() {
           averageOrderValue: Number(r.averageOrderValue), // opsional, bisa dihitung manual
         }))
 
-        setReports(parsedReports)
+        setReports(monthlyReportsData)
 
       } catch (error) {
-        console.error("Failed to fetch reports:", error)
         toast({
           title: "Error",
           description: "Failed to load reports. Please try again.",
@@ -48,7 +88,7 @@ export default function ReportsPage() {
       }
     }
 
-    fetchReports()
+    fetchOrdersForYear()
   }, [year, toast])
 
   useEffect(() => {
@@ -65,11 +105,11 @@ export default function ReportsPage() {
             const orderDate = new Date(order.createdAt)
             return orderDate >= startDate && orderDate <= endDate
           })
+          .filter((order) => order.status === "Completed")
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
         setMonthlyOrders(filteredOrders)
       } catch (error) {
-        console.error("Failed to fetch monthly orders:", error)
         toast({
           title: "Error",
           description: "Failed to load monthly orders. Please try again.",
@@ -82,6 +122,7 @@ export default function ReportsPage() {
 
     fetchMonthlyOrders()
   }, [selectedMonth, toast])
+
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -96,9 +137,10 @@ export default function ReportsPage() {
     return format(date, "dd MMMM yyyy", { locale: id })
   }
 
-  const totalSales = reports.reduce((sum, r) => sum + r.totalSales, 0)
-  const totalOrders = reports.reduce((sum, r) => sum + r.totalOrders, 0)
-  const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0
+  const totalSalesCompleted = monthlyOrders.reduce((sum, order) => sum + order.totalPrice, 0)
+  const totalOrdersCompleted = monthlyOrders.length
+  const averageOrderValueCompleted = totalOrdersCompleted > 0 ? totalSalesCompleted / totalOrdersCompleted : 0
+
 
   const getMonthOptions = () => {
     const options = []
@@ -186,15 +228,15 @@ export default function ReportsPage() {
 
     // Format bulan untuk cari data report
     const monthStr = format(selectedMonth, "MMMM yyyy", { locale: id })
-    const monthNameEn = format(selectedMonth, "LLLL")
+    const monthNameId = format(selectedMonth, "LLLL", { locale: id }).toLowerCase();
 
     // Cari report bulan ini dari reports
-    const report = reports.find(r => r.month === monthNameEn)
+    const report = reports.find(r => r.month.toLowerCase() === monthNameId);
 
     if (!report) {
       toast({
         title: "Error",
-        description: 'Data laporan untuk bulan ${monthStr}  ini tidak ditemukan.',
+        description: `Data laporan untuk bulan ${format(selectedMonth, "MMMM yyyy", { locale: id })} ini tidak ditemukan.`,
         variant: "destructive",
       })
       return
@@ -205,18 +247,21 @@ export default function ReportsPage() {
       ["Laporan Penjualan Bulan", monthStr],
       [],
       ["Total Sales", "Total Orders", "Average Order Value"],
-      [ formatRupiah(report.totalSales),
-        report.totalOrders.toString(),
-        report.totalOrders > 0
-          ? formatRupiah(report.totalSales / report.totalOrders)
-          : "Rp 0,00",],
+      [
+        formatRupiah(totalSalesCompleted),
+        totalOrdersCompleted.toString(),
+        totalOrdersCompleted > 0
+          ? formatRupiah(averageOrderValueCompleted)
+          : "Rp 0,00",
+      ],
     ]
+    
 
     // Header CSV order history
     const ordersCsv = [
       [],
       ["Riwayat Pesanan"],
-      ["Order ID", "Customer", "Date", "Status", "Payment Status", "Total Price"],
+      ["Order ID", "Customer", "Date", "Status", "Payment Status", "Total Price", "Payment Proof"],
     ]
 
     // Data order history
@@ -228,6 +273,7 @@ export default function ReportsPage() {
         order.status,
         order.paymentStatus,
         formatRupiah(order.totalPrice),
+        order.paymentProofUrl || order.receiptUrl || 'No proof',
       ])
     })
 
@@ -238,6 +284,7 @@ export default function ReportsPage() {
     const csvContent = csvData.map(row => row.join(";")).join("\n")
 
     // Buat blob dan link download
+    try {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -246,8 +293,10 @@ export default function ReportsPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  } catch (error) {
 
   }
+}
 
 
   return (
@@ -276,17 +325,20 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
-          >
-            Export Laporan
-          </button>
-
-
+          {userRole === "owner" ? (
+            <button
+              type="button"
+              onClick={() => {
+                handleExport()
+              }}
+              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
+            >
+              Export Laporan
+            </button>
+          ) : (
+            <p>User is not owner, export button hidden</p>
+          )}
         </div>
-
       </div>
 
       <Tabs defaultValue="monthly-orders" className="space-y-4">
@@ -364,8 +416,8 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatPrice(totalSales)}</div>
-                <p className="text-xs text-muted-foreground">For the year {year}</p>
+                <div className="text-2xl font-bold">{formatPrice(totalSalesCompleted)}</div>
+                <p className="text-xs text-muted-foreground">For {format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
               </CardContent>
             </Card>
             <Card>
@@ -373,8 +425,8 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalOrders}</div>
-                <p className="text-xs text-muted-foreground">For the year {year}</p>
+                <div className="text-2xl font-bold">{totalOrdersCompleted}</div>
+                <p className="text-xs text-muted-foreground">For {format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
               </CardContent>
             </Card>
             <Card>
@@ -382,8 +434,8 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium">Average Order Value</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatPrice(averageOrderValue)}</div>
-                <p className="text-xs text-muted-foreground">For the year {year}</p>
+                <div className="text-2xl font-bold">{formatPrice(averageOrderValueCompleted)}</div>
+                <p className="text-xs text-muted-foreground">For {format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
               </CardContent>
             </Card>
           </div>
@@ -452,3 +504,4 @@ export default function ReportsPage() {
   )
 
 }
+
