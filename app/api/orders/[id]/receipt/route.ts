@@ -6,8 +6,6 @@ import { authOptions } from "../../../auth/[...nextauth]/route"
 
 // Update receipt URL
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params // ini wajib
-
     try {
         const session = await getServerSession(authOptions)
 
@@ -18,6 +16,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await dbConnect()
 
         const { receiptUrl } = await req.json()
+        const { id } = await params
+
 
         if (!receiptUrl) {
             return NextResponse.json({ error: "Receipt URL is required" }, { status: 400 })

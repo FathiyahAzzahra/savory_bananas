@@ -1,9 +1,9 @@
-import NextAuth, { type NextAuthOptions } from "next-auth"
+import NextAuth, { type AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import dbConnect from "@/lib/mongodb"
 import User from "@/models/User"
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -12,56 +12,84 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("authorize() called with:", credentials)
-
         if (!credentials?.username || !credentials?.password) {
-          console.log("Missing credentials")
-          throw new Error("Please provide username and password")
+          return null
         }
 
         await dbConnect()
-        console.log("Connected to DB")
 
-        const user = await User.findOne({ username: credentials.username })
-        console.log("User from DB:", user)
+        try {
+          const user = await User.findOne({ username: credentials.username })
 
-        if (!user) {
-          console.log("No user found")
-          throw new Error("Invalid username or password")
-        }
+          if (!user) {
+            return null
+          }
 
-        const isPasswordValid = await user.comparePassword(credentials.password)
-        console.log("Password valid:", isPasswordValid)
+          const isPasswordValid = await user.comparePassword(credentials.password)
 
-        if (!isPasswordValid) {
-          throw new Error("Invalid username or password")
-        }
+          if (!isPasswordValid) {
+            return null
+          }
 
-        console.log("Login successful, returning user object")
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          username: user.username,
-          role: user.role,
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            username: user.username,
+            role: user.role,
+            email: user.email || "",
+            phone: user.phone || "",
+            profileImageUrl: user.profileImageUrl || "",
+          } as any
+        } catch (error) {
+          console.error("Auth error:", error)
+          return null
         }
       },
-
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.username = user.username
-        token.role = user.role
+        const userData = user as any
+        token.id = userData.id
+        token.name = userData.name
+        token.username = userData.username
+        token.role = userData.role
+        token.email = userData.email
+        token.phone = userData.phone
+        token.profileImageUrl = userData.profileImageUrl
       }
+
+      // Refresh user data on every token refresh
+      if (token.id) {
+        try {
+          await dbConnect()
+          const refreshedUser = await User.findById(token.id).select("-password")
+          if (refreshedUser) {
+            token.name = refreshedUser.name
+            token.username = refreshedUser.username
+            token.email = refreshedUser.email || ""
+            token.phone = refreshedUser.phone || ""
+            token.profileImageUrl = refreshedUser.profileImageUrl || ""
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error)
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string
-        session.user.username = token.username as string
-        session.user.role = token.role as string
+        ; (session.user as any) = {
+          id: token.id as string,
+          name: token.name as string,
+          username: token.username as string,
+          role: token.role as string,
+          email: token.email as string,
+          phone: token.phone as string,
+          profileImageUrl: token.profileImageUrl as string,
+        }
       }
       return session
     },

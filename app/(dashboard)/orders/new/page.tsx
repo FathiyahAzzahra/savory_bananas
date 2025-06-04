@@ -87,8 +87,8 @@ export default function CashierPage() {
     if (existingItem) {
       if (existingItem.quantity >= product.quantity) {
         toast({
-          title: "Stock tidak cukup",
-          description: `Stok ${product.name} hanya tersisa ${product.quantity}`,
+          title: "Stock is not enough",
+          description: `Stock ${product.name} only left ${product.quantity}`,
           variant: "destructive",
         })
         return
@@ -97,8 +97,8 @@ export default function CashierPage() {
     } else {
       if (product.quantity === 0) {
         toast({
-          title: "Stok habis",
-          description: `${product.name} sedang tidak tersedia`,
+          title: "Out of stock",
+          description: `${product.name} currently unavailable`,
           variant: "destructive",
         })
         return
@@ -126,8 +126,8 @@ export default function CashierPage() {
     const item = cart.find((item) => item.productId === productId)
     if (item && newQuantity > item.stock) {
       toast({
-        title: "Stock tidak cukup",
-        description: `Stok ${item.name} hanya tersisa ${item.stock}`,
+        title: "Stock is not enough",
+        description: `Stock ${item.name} only left ${item.stock}`,
         variant: "destructive",
       })
       return
@@ -172,7 +172,7 @@ export default function CashierPage() {
       if (discountValue > 100) {
         toast({
           title: "Error",
-          description: "Diskon persentase tidak boleh lebih dari 100%",
+          description: "Percentage discount cannot be more than 100%",
           variant: "destructive",
         })
         return
@@ -182,7 +182,7 @@ export default function CashierPage() {
       if (discountValue > subtotal) {
         toast({
           title: "Error",
-          description: "Diskon nominal tidak boleh lebih dari subtotal",
+          description: "The nominal discount cannot be more than the subtotal",
           variant: "destructive",
         })
         return
@@ -218,7 +218,7 @@ export default function CashierPage() {
     if (!customerName.trim()) {
       toast({
         title: "Error",
-        description: "Nama pelanggan harus diisi",
+        description: "Customer name is required",
         variant: "destructive",
       })
       return
@@ -227,7 +227,7 @@ export default function CashierPage() {
     if (cart.length === 0) {
       toast({
         title: "Error",
-        description: "Keranjang masih kosong",
+        description: "The cart is still empty",
         variant: "destructive",
       })
       return
@@ -236,7 +236,7 @@ export default function CashierPage() {
     if (!paymentMethod) {
       toast({
         title: "Error",
-        description: "Pilih metode pembayaran",
+        description: "Select payment method",
         variant: "destructive",
       })
       return
@@ -246,7 +246,7 @@ export default function CashierPage() {
     if (paymentMethod === "cash" && cashReceived < calculateTotal()) {
       toast({
         title: "Error",
-        description: "Uang yang diterima kurang dari total tagihan",
+        description: "Money received is less than total bill",
         variant: "destructive",
       })
       return
@@ -256,7 +256,7 @@ export default function CashierPage() {
     if (paymentMethod === "transfer" && !paymentProofUrl) {
       toast({
         title: "Error",
-        description: "Upload bukti pembayaran terlebih dahulu",
+        description: "Upload proof of payment first",
         variant: "destructive",
       })
       return
@@ -325,11 +325,11 @@ export default function CashierPage() {
         // For non-cash payment, show success message
         const statusMessage =
           paymentMethod === "debt"
-            ? "Order telah dibuat dengan status hutang"
-            : "Order telah dibuat dan menunggu verifikasi pembayaran"
+            ? "An order has been created with payable status"
+            : "Order has been created and awaiting payment verification"
 
         toast({
-          title: "Transaksi berhasil",
+          title: "Transaction successful",
           description: statusMessage,
         })
       }
@@ -346,7 +346,7 @@ export default function CashierPage() {
       console.error("Failed to process checkout:", error)
       toast({
         title: "Error",
-        description: "Gagal memproses transaksi. Silakan coba lagi.",
+        description: "Failed to process transaction. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -407,8 +407,8 @@ export default function CashierPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Kasir</h2>
-          <p className="text-muted-foreground">Sistem Point of Sale</p>
+          <h2 className="text-3xl font-bold tracking-tight">New Order</h2>
+          <p className="text-muted-foreground">Savory Bananas</p>
         </div>
       </div>
 
@@ -418,11 +418,11 @@ export default function CashierPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Produk</CardTitle>
+                <CardTitle>Product</CardTitle>
                 <div className="relative w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cari produk..."
+                    placeholder="Search Product..."
                     className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -456,11 +456,11 @@ export default function CashierPage() {
                       <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
                       <p className="text-primary font-bold text-sm">{formatPrice(product.price)}</p>
                       <p className="text-xs text-muted-foreground">
-                        Stok: {product.quantity} {product.unit}
+                        Stock: {product.quantity} {product.unit}
                       </p>
                       {product.quantity === 0 && (
                         <Badge variant="destructive" className="mt-1 text-xs">
-                          Habis
+                          out of stock
                         </Badge>
                       )}
                     </CardContent>
@@ -477,15 +477,15 @@ export default function CashierPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />
-                Keranjang ({cart.length})
+                Cart ({cart.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="customerName">Nama Pelanggan</Label>
+                <Label htmlFor="customerName">Customer Name</Label>
                 <Input
                   id="customerName"
-                  placeholder="Masukkan nama pelanggan"
+                  placeholder="Enter customer name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                 />
@@ -493,7 +493,7 @@ export default function CashierPage() {
 
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {cart.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Keranjang kosong</p>
+                  <p className="text-center text-muted-foreground py-4">Shopping cart is empty</p>
                 ) : (
                   cart.map((item) => (
                     <div key={item.productId} className="flex items-center gap-3 p-3 border rounded">
@@ -541,12 +541,12 @@ export default function CashierPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
+                  <span>Sub-Total:</span>
                   <span>{formatPrice(calculateSubtotal())}</span>
                 </div>
                 {discount && (
                   <div className="flex justify-between text-red-600">
-                    <span>Diskon ({discount.type === "percentage" ? `${discount.value}%` : "Nominal"}):</span>
+                    <span>Discount ({discount.type === "percentage" ? `${discount.value}%` : "Nominal"}):</span>
                     <span>-{formatPrice(discount.amount)}</span>
                   </div>
                 )}
@@ -564,7 +564,7 @@ export default function CashierPage() {
                   disabled={cart.length === 0}
                 >
                   <Percent className="mr-2 h-4 w-4" />
-                  {discount ? "Ubah Diskon" : "Tambah Diskon"}
+                  {discount ? "Change Discount" : "Add Discount"}
                 </Button>
                 <Button
                   className="w-full"
@@ -583,17 +583,17 @@ export default function CashierPage() {
       <Dialog open={isDiscountOpen} onOpenChange={setIsDiscountOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tambah Diskon Transaksi</DialogTitle>
+            <DialogTitle>Add Transaction Discount</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Tabs value={discountType} onValueChange={(value) => setDiscountType(value as any)}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="nominal">Diskon Nominal</TabsTrigger>
-                <TabsTrigger value="percentage">Diskon Persen</TabsTrigger>
+                <TabsTrigger value="nominal">Nominal Discount</TabsTrigger>
+                <TabsTrigger value="percentage">Percentage Discount</TabsTrigger>
               </TabsList>
               <TabsContent value="nominal" className="space-y-4">
                 <div>
-                  <Label>Masukkan jumlah:</Label>
+                  <Label>Enter the amount:</Label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -604,7 +604,7 @@ export default function CashierPage() {
               </TabsContent>
               <TabsContent value="percentage" className="space-y-4">
                 <div>
-                  <Label>Masukkan jumlah:</Label>
+                  <Label>Enter the amount:</Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -630,9 +630,9 @@ export default function CashierPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDiscountOpen(false)}>
-              Batal
+              Cancel
             </Button>
-            <Button onClick={applyDiscount}>Terapkan</Button>
+            <Button onClick={applyDiscount}>Apply</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -649,20 +649,20 @@ export default function CashierPage() {
       >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Checkout Pembayaran</DialogTitle>
+            <DialogTitle>Payment Checkout</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             {/* Order Summary */}
             <div className="space-y-2">
-              <h4 className="font-medium">Ringkasan Pesanan</h4>
+              <h4 className="font-medium">Order Summary</h4>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
+                  <span>Sub-Total:</span>
                   <span>{formatPrice(calculateSubtotal())}</span>
                 </div>
                 {discount && (
                   <div className="flex justify-between text-red-600">
-                    <span>Diskon:</span>
+                    <span>Discount:</span>
                     <span>-{formatPrice(discount.amount)}</span>
                   </div>
                 )}
@@ -677,7 +677,7 @@ export default function CashierPage() {
 
             {/* Payment Method */}
             <div className="space-y-4">
-              <Label>Metode Pembayaran</Label>
+              <Label>Payment Methods</Label>
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(value) => {
@@ -694,16 +694,16 @@ export default function CashierPage() {
                   <RadioGroupItem value="cash" id="cash" />
                   <Label htmlFor="cash" className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
-                    Tunai
+                    Cash
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="transfer" id="transfer" />
-                  <Label htmlFor="transfer">Transfer Bank</Label>
+                  <Label htmlFor="transfer">Bank Transfer</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="debt" id="debt" />
-                  <Label htmlFor="debt">Hutang</Label>
+                  <Label htmlFor="debt">Debt</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -712,7 +712,7 @@ export default function CashierPage() {
             {paymentMethod === "cash" && (
               <div className="space-y-3">
                 <div>
-                  <Label>Uang yang diterima:</Label>
+                  <Label>Money received:</Label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -721,10 +721,10 @@ export default function CashierPage() {
                   />
                 </div>
                 <div>
-                  <Label>Saran:</Label>
+                  <Label>Suggestion:</Label>
                   <div className="flex gap-2 flex-wrap mt-2">
                     <Button variant="outline" size="sm" onClick={() => setCashReceived(calculateTotal())}>
-                      Uang Pas
+                      Exact Money
                     </Button>
                     {suggestedCashAmounts
                       .filter((amount) => amount >= calculateTotal())
@@ -743,11 +743,11 @@ export default function CashierPage() {
                       <span>{formatPrice(calculateTotal())}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Diterima:</span>
+                      <span>Money Received:</span>
                       <span>{formatPrice(cashReceived)}</span>
                     </div>
                     <div className="flex justify-between font-bold">
-                      <span>Kembalian:</span>
+                      <span>Change money:</span>
                       <span>{formatPrice(calculateChange())}</span>
                     </div>
                   </div>
@@ -772,8 +772,8 @@ export default function CashierPage() {
                   disabled={isSubmitting}
                 />
                 <div className="text-sm text-muted-foreground">
-                  <p>Upload bukti pembayaran untuk metode Transfer Bank</p>
-                  <p>Transaksi akan menunggu verifikasi setelah upload bukti pembayaran</p>
+                  <p>Upload proof of payment for Bank Transfer method</p>
+                  <p>Transactions will await verification after uploading proof of payment</p>
                 </div>
               </div>
             )}
@@ -782,15 +782,14 @@ export default function CashierPage() {
             {paymentMethod === "debt" && (
               <div className="p-3 bg-orange-50 border border-orange-200 rounded">
                 <p className="text-sm text-orange-800">
-                  <strong>Pembayaran Hutang:</strong> Order akan dibuat dengan status hutang. Pembayaran dapat dilakukan
-                  kemudian.
+                  <strong>Debt Payment:</strong> Orders will be created with debt status. Payment can be made Then.
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} disabled={isSubmitting}>
-              Batal
+              Cancel
             </Button>
             <Button
               onClick={processCheckout}
@@ -803,12 +802,12 @@ export default function CashierPage() {
               }
             >
               {isSubmitting
-                ? "Memproses..."
+                ? "Processing..."
                 : paymentMethod === "cash"
-                  ? "Bayar"
+                  ? "Pay"
                   : paymentMethod === "debt"
-                    ? "Buat Hutang"
-                    : "Konfirmasi Pembayaran"}
+                    ? "Create Debt"
+                    : "Payment Confirmation"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -816,9 +815,10 @@ export default function CashierPage() {
 
       {/* Receipt Dialog - Only for Cash Payment */}
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
+          {" "}
           <DialogHeader>
-            <DialogTitle className="text-center">Transaksi Sukses</DialogTitle>
+            <DialogTitle className="text-center">Transaction Success</DialogTitle>
           </DialogHeader>
           {currentReceipt && (
             <div className="space-y-4">
@@ -831,7 +831,7 @@ export default function CashierPage() {
                   <br />
                   Daerah Khusus Ibukota Jakarta 11470, Indonesia
                 </p>
-                <p className="text-sm">{new Date(currentReceipt.createdAt).toLocaleString("id-ID")}</p>
+                <p className="text-sm">{new Date(currentReceipt.createdAt).toLocaleString("en-US")}</p>{" "}
               </div>
 
               <Separator />
@@ -842,7 +842,7 @@ export default function CashierPage() {
                   <span className="font-mono">{currentReceipt.receiptId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Kasir</span>
+                  <span>Cashier</span>
                   <span>{currentReceipt.cashier}</span>
                 </div>
               </div>
@@ -872,12 +872,12 @@ export default function CashierPage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
+                  <span>Sub-Total</span>
                   <span>{formatPrice(currentReceipt.subtotal)}</span>
                 </div>
                 {currentReceipt.discount && (
                   <div className="flex justify-between text-red-600">
-                    <span>Total Diskon</span>
+                    <span>Total Discount</span>
                     <span>({formatPrice(currentReceipt.discount.amount)})</span>
                   </div>
                 )}
@@ -886,11 +886,11 @@ export default function CashierPage() {
                   <span>{formatPrice(currentReceipt.total)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Uang Diterima</span>
+                  <span>Money Received</span>
                   <span>{formatPrice(currentReceipt.cashReceived)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Kembalian</span>
+                  <span>Change money</span>
                   <span>{formatPrice(currentReceipt.change)}</span>
                 </div>
               </div>
@@ -907,7 +907,7 @@ export default function CashierPage() {
                 }}
                 className="flex-1"
               >
-                Tutup
+                Close
               </Button>
               <Button
                 onClick={() => {
@@ -916,7 +916,7 @@ export default function CashierPage() {
                 }}
                 className="flex-1"
               >
-                Transaksi Baru
+                New Transactions
               </Button>
             </div>
           </DialogFooter>

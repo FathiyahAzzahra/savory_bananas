@@ -63,8 +63,16 @@ export const userService = {
 
 // Order API services
 export const orderService = {
-  getAll: async () => {
-    return fetchAPI<any[]>("/orders")
+  getAll: async (year?: string, month?: string) => {
+    let endpoint = "/orders"
+    const params = new URLSearchParams()
+    if (year) params.append("year", year)
+    if (month) params.append("month", month)
+
+    if (params.toString()) {
+      endpoint += `?${params.toString()}`
+    }
+    return fetchAPI<any[]>(endpoint)
   },
   getById: async (id: string) => {
     return fetchAPI<any>(`/orders/${id}`)
@@ -95,10 +103,14 @@ export const orderService = {
       body: JSON.stringify({ status }),
     })
   },
-  updatePaymentStatus: async (id: string, paymentStatus: string) => {
+
+  // Pastikan fungsi updatePaymentStatus mengirimkan reason dengan benar
+
+  // Ubah fungsi updatePaymentStatus:
+  updatePaymentStatus: async (id: string, paymentStatus: string, reason?: string) => {
     return fetchAPI<any>(`/orders/${id}/payment-status`, {
       method: "PATCH",
-      body: JSON.stringify({ paymentStatus }),
+      body: JSON.stringify({ paymentStatus, reason }),
     })
   },
   updateReceiptUrl: async (id: string, receiptUrl: string) => {
@@ -106,6 +118,27 @@ export const orderService = {
     return fetchAPI<any>(`/orders/${id}/receipt`, {
       method: "PATCH",
       body: JSON.stringify({ receiptUrl }),
+    })
+  },
+  cancelOrder: async (id: string, reason?: string) => {
+    return fetchAPI<any>(`/orders/${id}/cancel`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    })
+  },
+  submitDebtPayment: async (id: string, paymentProofUrl: string) => {
+    return fetchAPI<any>(`/orders/${id}/debt-payment`, {
+      method: "PATCH",
+      body: JSON.stringify({ paymentProofUrl }),
+    })
+  },
+  submitDebtPaymentCash: async (
+    id: string,
+    paymentData: { cashReceived: number; change: number; receiptUrl: string },
+  ) => {
+    return fetchAPI<any>(`/orders/${id}/debt-payment`, {
+      method: "POST",
+      body: JSON.stringify(paymentData),
     })
   },
 }

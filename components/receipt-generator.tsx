@@ -38,6 +38,7 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat("id-ID", {
+            // Keep IDR format for currency
             style: "currency",
             currency: "IDR",
             minimumFractionDigits: 0,
@@ -52,8 +53,8 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
         if (!ctx) return null
 
         // Set canvas size
-        canvas.width = 400
-        canvas.height = 600
+        canvas.width = 550 // Increased width further for more space
+        canvas.height = 650 // Increased height slightly if needed for more lines
 
         // Set background
         ctx.fillStyle = "#ffffff"
@@ -66,99 +67,100 @@ export function ReceiptGenerator({ receipt, onReceiptGenerated }: ReceiptGenerat
         let y = 30
 
         // Header
-        ctx.font = "bold 20px Arial"
+        ctx.font = "bold 24px Arial" // Slightly larger font for main title
         ctx.fillText("SAVORYBANANAS", canvas.width / 2, y)
-        y += 25
-
-        ctx.font = "12px Arial"
-        ctx.fillText("Jl. Way Besay No.34a, RT.4/RW.1", canvas.width / 2, y)
-        y += 15
-        ctx.fillText("Tj. Duren Sel., Kec. Grogol petamburan", canvas.width / 2, y)
-        y += 15
-        ctx.fillText("Kota Jakarta Barat, DKI Jakarta 11470", canvas.width / 2, y)
         y += 30
 
+        ctx.font = "14px Arial" // Slightly larger font for address
+        ctx.fillText("Jl. Way Besay No.34a, RT.4/RW.1", canvas.width / 2, y)
+        y += 18
+        ctx.fillText("Tj. Duren Sel., Kec. Grogol petamburan", canvas.width / 2, y)
+        y += 18
+        ctx.fillText("Kota Jakarta Barat, DKI Jakarta 11470", canvas.width / 2, y)
+        y += 35
+
         // Date and receipt info
-        ctx.font = "12px Arial"
-        ctx.fillText(new Date(receipt.createdAt).toLocaleString("id-ID"), canvas.width / 2, y)
-        y += 25
+        ctx.font = "14px Arial"
+        ctx.fillText(new Date(receipt.createdAt).toLocaleString("en-US"), canvas.width / 2, y) // Changed to en-US
+        y += 30
 
         ctx.textAlign = "left"
-        ctx.fillText(`ID Trans: ${receipt.receiptId}`, 20, y)
-        y += 15
-        ctx.fillText(`Kasir: ${receipt.cashier}`, 20, y)
-        y += 15
-        ctx.fillText(`Customer: ${receipt.customerName}`, 20, y)
-        y += 25
+        ctx.font = "14px Arial"
+        ctx.fillText(`Transaction ID: ${receipt.receiptId}`, 30, y) // Adjusted padding, changed text
+        y += 20
+        ctx.fillText(`Cashier: ${receipt.cashier}`, 30, y) // Adjusted padding, changed text
+        y += 20
+        ctx.fillText(`Customer: ${receipt.customerName}`, 30, y) // Adjusted padding
+        y += 30
 
         // Line separator
         ctx.beginPath()
-        ctx.moveTo(20, y)
-        ctx.lineTo(canvas.width - 20, y)
+        ctx.moveTo(30, y)
+        ctx.lineTo(canvas.width - 30, y) // Adjusted padding
         ctx.stroke()
-        y += 20
+        y += 25
 
         // Products
-        ctx.font = "12px Arial"
+        ctx.font = "14px Arial"
         receipt.products.forEach((product) => {
-            ctx.fillText(product.name, 20, y)
-            y += 15
-            ctx.fillText(`${product.quantity} x ${formatPrice(product.price)}`, 30, y)
-            ctx.textAlign = "right"
-            ctx.fillText(formatPrice(product.price * product.quantity), canvas.width - 20, y)
-            ctx.textAlign = "left"
+            ctx.fillText(product.name, 30, y) // Adjusted padding
             y += 20
+            ctx.fillText(`${product.quantity} x ${formatPrice(product.price)}`, 40, y) // Adjusted padding
+            ctx.textAlign = "right"
+            ctx.fillText(formatPrice(product.price * product.quantity), canvas.width - 30, y) // Adjusted padding
+            ctx.textAlign = "left"
+            y += 25
         })
 
         // Line separator
         ctx.beginPath()
-        ctx.moveTo(20, y)
-        ctx.lineTo(canvas.width - 20, y)
+        ctx.moveTo(30, y)
+        ctx.lineTo(canvas.width - 30, y) // Adjusted padding
         ctx.stroke()
-        y += 20
+        y += 25
 
         // Totals
         ctx.textAlign = "left"
-        ctx.fillText("Subtotal:", 20, y)
+        ctx.fillText("Subtotal:", 30, y) // Adjusted padding
         ctx.textAlign = "right"
-        ctx.fillText(formatPrice(receipt.subtotal), canvas.width - 20, y)
-        y += 15
+        ctx.fillText(formatPrice(receipt.subtotal), canvas.width - 30, y) // Adjusted padding
+        y += 20
 
         if (receipt.discount) {
             ctx.textAlign = "left"
-            ctx.fillText("Diskon:", 20, y)
+            ctx.fillText("Total Discount:", 30, y) // Adjusted padding, changed text
             ctx.textAlign = "right"
-            ctx.fillText(`-${formatPrice(receipt.discount.amount)}`, canvas.width - 20, y)
-            y += 15
-        }
-
-        ctx.font = "bold 14px Arial"
-        ctx.textAlign = "left"
-        ctx.fillText("Total:", 20, y)
-        ctx.textAlign = "right"
-        ctx.fillText(formatPrice(receipt.total), canvas.width - 20, y)
-        y += 20
-
-        if (receipt.paymentMethod === "cash" && receipt.cashReceived) {
-            ctx.font = "12px Arial"
-            ctx.textAlign = "left"
-            ctx.fillText("Uang Diterima:", 20, y)
-            ctx.textAlign = "right"
-            ctx.fillText(formatPrice(receipt.cashReceived), canvas.width - 20, y)
-            y += 15
-
-            ctx.textAlign = "left"
-            ctx.fillText("Kembalian:", 20, y)
-            ctx.textAlign = "right"
-            ctx.fillText(formatPrice(receipt.change || 0), canvas.width - 20, y)
+            ctx.fillText(`-${formatPrice(receipt.discount.amount)}`, canvas.width - 30, y) // Adjusted padding
             y += 20
         }
 
+        ctx.font = "bold 16px Arial" // Slightly larger font for total
+        ctx.textAlign = "left"
+        ctx.fillText("Total:", 30, y) // Adjusted padding
+        ctx.textAlign = "right"
+        ctx.fillText(formatPrice(receipt.total), canvas.width - 30, y) // Adjusted padding
+        y += 25
+
+        if (receipt.paymentMethod === "cash" && receipt.cashReceived) {
+            ctx.font = "14px Arial"
+            ctx.textAlign = "left"
+            ctx.fillText("Money Received:", 30, y) // Adjusted padding, changed text
+            ctx.textAlign = "right"
+            ctx.fillText(formatPrice(receipt.cashReceived), canvas.width - 30, y) // Adjusted padding
+            y += 20
+
+            ctx.textAlign = "left"
+            ctx.fillText("Change:", 30, y) // Adjusted padding, changed text
+            ctx.textAlign = "right"
+            ctx.fillText(formatPrice(receipt.change || 0), canvas.width - 30, y) // Adjusted padding
+            y += 25
+        }
+
         // Footer
-        y += 20
-        ctx.font = "12px Arial"
+        y += 25
+        ctx.font = "14px Arial"
         ctx.textAlign = "center"
-        ctx.fillText("Terima kasih atas kunjungan Anda!", canvas.width / 2, y)
+        ctx.fillText("Thank you for your visit!", canvas.width / 2, y) // Changed to English
 
         return canvas
     }

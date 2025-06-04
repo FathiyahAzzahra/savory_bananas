@@ -40,7 +40,7 @@ export function ProductImageUpload({
         const validationError = validateImageFile(file);
         if (validationError) {
             toast({
-                title: "File tidak valid",
+                title: "Invalid file",
                 description: validationError,
                 variant: "destructive",
             });
@@ -60,16 +60,16 @@ export function ProductImageUpload({
             if (imageUrl) {
                 onUploadComplete(imageUrl);
                 toast({
-                    title: "Upload berhasil",
-                    description: "Gambar produk berhasil diupload",
+                    title: "Upload successful",
+                    description: "Product image successfully uploaded",
                 });
             } else {
                 throw new Error("Failed to upload image");
             }
         } catch (error) {
-            const errorMessage = "Gagal mengupload gambar. Silakan coba lagi.";
+            const errorMessage = "Failed to upload image. Please try again.";
             toast({
-                title: "Upload gagal",
+                title: "Upload failed",
                 description: errorMessage,
                 variant: "destructive",
             });
@@ -128,7 +128,7 @@ export function ProductImageUpload({
 
     return (
         <div className="space-y-4">
-            <Label>Gambar Produk</Label>
+            <Label>Product Images</Label>
 
             {currentImageUrl ? (
                 <Card>
@@ -149,7 +149,7 @@ export function ProductImageUpload({
                                 <X className="h-4 w-4" />
                             </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-2">Gambar produk berhasil diupload</p>
+                        <p className="text-sm text-muted-foreground mt-2">Product image successfully uploaded</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -166,7 +166,7 @@ export function ProductImageUpload({
                             {isUploading ? (
                                 <>
                                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                    <p className="text-sm text-muted-foreground">Mengupload gambar...</p>
+                                    <p className="text-sm text-muted-foreground">Uploading images...</p>
                                     <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                                         <div
                                             className="bg-primary h-2.5 rounded-full transition-all duration-300"
@@ -181,13 +181,13 @@ export function ProductImageUpload({
                                         <ImageIcon className="h-6 w-6 text-muted-foreground" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-sm font-medium">Upload gambar produk</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Drag & drop atau klik untuk memilih</p>
+                                        <p className="text-sm font-medium">Upload product images</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to select</p>
                                         <p className="text-xs text-muted-foreground">Format: JPEG, PNG, WebP (Max: 5MB)</p>
                                     </div>
                                     <Button variant="outline" size="sm" disabled={disabled}>
                                         <Upload className="h-4 w-4 mr-2" />
-                                        Pilih Gambar
+                                        Select Image
                                     </Button>
                                 </>
                             )}

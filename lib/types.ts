@@ -3,6 +3,9 @@ export interface User {
   username: string
   role: "admin" | "owner"
   name: string
+  email?: string
+  phone?: string
+  profileImageUrl?: string
 }
 
 export interface Order {
@@ -10,8 +13,8 @@ export interface Order {
   customerName: string
   products: OrderProduct[]
   totalPrice: number
-  status: "Not Yet Processed" | "Being Sent" | "Completed"
-  paymentStatus: "Paid" | "Debt" | "Pending Verification"
+  status: "Not Yet Processed" | "Being Sent" | "Completed" | "Cancelled"
+  paymentStatus: "Paid" | "Debt" | "Pending Verification" | "Payment Rejected" | "Cancelled"
   paymentMethod?: "cash" | "transfer" | "debt"
   paymentProofUrl?: string
   receiptUrl?: string
@@ -23,6 +26,7 @@ export interface Order {
   cashReceived?: number
   change?: number
   receiptId?: string
+  cancellationReason?: string
   createdAt: string
   updatedAt: string
 }

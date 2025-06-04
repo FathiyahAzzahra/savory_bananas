@@ -5,7 +5,7 @@ import Stock from "@/models/Stock"
 import { authOptions } from "../../auth/[...nextauth]/route"
 
 // Get stock by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -15,7 +15,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     await dbConnect()
 
-    const stock = await Stock.findById(params.id)
+    const { id } = await params
+    const stock = await Stock.findById(id)
 
     if (!stock) {
       return NextResponse.json({ error: "Stock not found" }, { status: 404 })
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Update stock
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -44,9 +45,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await dbConnect()
 
     const { name, quantity, unit, price } = await req.json()
+    const { id } = await params
 
     const stock = await Stock.findByIdAndUpdate(
-      params.id,
+      id,
       {
         name,
         quantity,
@@ -68,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Delete stock
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -82,7 +84,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     await dbConnect()
 
-    const stock = await Stock.findByIdAndDelete(params.id)
+    const { id } = await params
+    const stock = await Stock.findByIdAndDelete(id)
 
     if (!stock) {
       return NextResponse.json({ error: "Stock not found" }, { status: 404 })

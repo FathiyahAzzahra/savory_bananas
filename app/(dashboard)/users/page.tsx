@@ -88,7 +88,7 @@ export default function UsersPage() {
 
       <div className="flex justify-end">
         <Link href="/users/adduser">
-          <Button className="bg-primary text-white">Add User</Button>
+          <Button className="bg-primary text-white">Add Admin</Button>
         </Link>
       </div>
 
@@ -147,7 +147,7 @@ export default function UsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Link href={`/users/edit/${user._id}`}>
+                        <Link href={`/users/edituser/${user._id}`}>
                           <Button variant="outline" size="sm">Edit</Button>
                         </Link>
                         <Button

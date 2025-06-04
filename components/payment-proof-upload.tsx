@@ -122,7 +122,7 @@ export function PaymentProofUpload({
 
     return (
         <div className="space-y-4">
-            <Label>Bukti Pembayaran *</Label>
+            <Label>Proof of payment *</Label>
 
             {uploadedImageUrl ? (
                 <Card>
@@ -130,7 +130,7 @@ export function PaymentProofUpload({
                         <div className="relative">
                             <img
                                 src={uploadedImageUrl || "/placeholder.svg"}
-                                alt="Bukti pembayaran"
+                                alt="Proof of payment"
                                 className="w-full h-48 object-cover rounded-lg"
                             />
                             <Button
@@ -143,7 +143,7 @@ export function PaymentProofUpload({
                                 <X className="h-4 w-4" />
                             </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-2">Bukti pembayaran berhasil diupload</p>
+                        <p className="text-sm text-muted-foreground mt-2">Proof of payment successfully uploaded</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -160,7 +160,7 @@ export function PaymentProofUpload({
                             {isUploading ? (
                                 <>
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    <p className="text-sm text-muted-foreground">Mengupload gambar...</p>
+                                    <p className="text-sm text-muted-foreground">Mupload image...</p>
                                 </>
                             ) : (
                                 <>
@@ -168,13 +168,13 @@ export function PaymentProofUpload({
                                         <ImageIcon className="h-8 w-8 text-muted-foreground" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-sm font-medium">Upload bukti pembayaran</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Drag & drop atau klik untuk memilih gambar</p>
+                                        <p className="text-sm font-medium">Upload proof of payment</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to select images</p>
                                         <p className="text-xs text-muted-foreground">Format: JPEG, PNG, WebP (Max: 5MB)</p>
                                     </div>
                                     <Button variant="outline" size="sm" disabled={disabled}>
                                         <Upload className="h-4 w-4 mr-2" />
-                                        Pilih Gambar
+                                        Select Image
                                     </Button>
                                 </>
                             )}

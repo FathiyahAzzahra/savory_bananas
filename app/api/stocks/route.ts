@@ -30,11 +30,19 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized - Please login" }, { status: 401 })
     }
 
-    if (session.user.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    console.log("User role attempting to add stock:", session.user.role) // Debug log
+
+    // Allow both admin and owner to add stock
+    if (session.user.role !== "admin" && session.user.role !== "owner") {
+      return NextResponse.json(
+        {
+          error: `Forbidden - Only admin or owner can add stock. Your role: ${session.user.role}`,
+        },
+        { status: 403 },
+      )
     }
 
     await dbConnect()
