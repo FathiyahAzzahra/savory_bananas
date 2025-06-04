@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -10,20 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("") // 🔴 manual error message
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
-  const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setErrorMessage("") // reset error
 
     try {
       const result = await signIn("credentials", {
@@ -33,25 +32,13 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        toast({
-          title: "Login failed",
-          description: "Invalid username or password",
-          variant: "destructive",
-        })
+        setErrorMessage("Username atau password salah.") // 🔴 tampilkan pesan
       } else {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        })
         router.push(callbackUrl)
       }
     } catch (error) {
       console.error("Login error:", error)
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login",
-        variant: "destructive",
-      })
+      setErrorMessage("Terjadi kesalahan saat login.")
     } finally {
       setIsLoading(false)
     }
@@ -77,6 +64,13 @@ export default function LoginPage() {
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
+              {/* 🔴 ERROR MESSAGE */}
+              {errorMessage && (
+                <div className="bg-red-100 text-red-700 border border-red-400 px-4 py-2 rounded-md text-sm">
+                  {errorMessage}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="username" className="font-medium">
                   Username
@@ -109,7 +103,6 @@ export default function LoginPage() {
               <Button type="submit" className="w-full font-medium" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
-
             </CardFooter>
           </form>
         </Card>

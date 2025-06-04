@@ -17,8 +17,8 @@ export interface IOrder extends mongoose.Document {
   customerName: string
   products: OrderProduct[]
   totalPrice: number
-  status: "Not Yet Processed" | "Being Sent" | "Completed"
-  paymentStatus: "Paid" | "Debt" | "Pending Verification"
+  status: "Not Yet Processed" | "Being Sent" | "Completed" | "Cancelled"
+  paymentStatus: "Paid" | "Debt" | "Pending Verification" | "Payment Rejected" | "Cancelled"
   paymentMethod?: "cash" | "transfer" | "debt"
   paymentProofUrl?: string
   receiptUrl?: string
@@ -26,6 +26,7 @@ export interface IOrder extends mongoose.Document {
   cashReceived?: number
   change?: number
   receiptId?: string
+  cancellationReason?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -92,12 +93,12 @@ const OrderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Not Yet Processed", "Being Sent", "Completed"],
+      enum: ["Not Yet Processed", "Being Sent", "Completed", "Cancelled"],
       default: "Not Yet Processed",
     },
     paymentStatus: {
       type: String,
-      enum: ["Paid", "Debt", "Pending Verification"],
+      enum: ["Paid", "Debt", "Pending Verification", "Payment Rejected", "Cancelled"],
       default: "Pending Verification",
     },
     paymentMethod: {
@@ -126,6 +127,9 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+    cancellationReason: {
+      type: String,
     },
   },
   { timestamps: true },

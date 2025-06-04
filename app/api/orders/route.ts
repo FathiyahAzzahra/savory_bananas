@@ -6,7 +6,7 @@ import Stock from "@/models/Stock"
 import { authOptions } from "../auth/[...nextauth]/route"
 
 // Get all orders
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -16,8 +16,24 @@ export async function GET() {
 
     await dbConnect()
 
-    const orders = await Order.find({}).sort({ createdAt: -1 })
+    const { searchParams } = req.nextUrl
+    const year = searchParams.get("year")
+    const month = searchParams.get("month")
 
+    const query: any = {}
+
+    if (year && month) {
+      const startOfMonth = new Date(Number.parseInt(year), Number.parseInt(month) - 1, 1)
+      const endOfMonth = new Date(Number.parseInt(year), Number.parseInt(month), 0) // Last day of the month
+      endOfMonth.setHours(23, 59, 59, 999) // Set to end of day
+
+      query.createdAt = {
+        $gte: startOfMonth,
+        $lte: endOfMonth,
+      }
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 })
     return NextResponse.json(orders)
   } catch (error: any) {
     console.error("Error fetching orders:", error)

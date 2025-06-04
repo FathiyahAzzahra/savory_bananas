@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Plus, MoreHorizontal, Search, ImageIcon, AlertTriangle } from "lucide-react"
+import { Plus, MoreHorizontal, Search, ImageIcon, AlertTriangle, CheckCircle, AlertCircle, XCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { stockService } from "@/lib/api-services"
 import { ProductImageUpload } from "@/components/product-image-upload"
@@ -43,7 +44,7 @@ export default function StockPage() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0) // ✅ Added this line
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const [newStock, setNewStock] = useState({
     name: "",
@@ -78,9 +79,7 @@ export default function StockPage() {
 
   useEffect(() => {
     if (searchTerm) {
-      const filtered = stock.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      const filtered = stock.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
       setFilteredStock(filtered)
     } else {
       setFilteredStock(stock)
@@ -93,6 +92,34 @@ export default function StockPage() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price)
+
+  const getStockStatus = (quantity: number) => {
+    if (quantity === 0) {
+      return {
+        label: "Out of Stock",
+        variant: "destructive" as const,
+        icon: <XCircle className="h-4 w-4" />,
+      }
+    } else if (quantity <= 20) {
+      return {
+        label: "Almost Out",
+        variant: "destructive" as const,
+        icon: <AlertTriangle className="h-4 w-4" />,
+      }
+    } else if (quantity <= 50) {
+      return {
+        label: "Limited Stock",
+        variant: "secondary" as const,
+        icon: <AlertCircle className="h-4 w-4" />,
+      }
+    } else {
+      return {
+        label: "In Stock",
+        variant: "default" as const,
+        icon: <CheckCircle className="h-4 w-4" />,
+      }
+    }
+  }
 
   const resetNewStockForm = () => {
     setNewStock({
@@ -130,9 +157,7 @@ export default function StockPage() {
     try {
       await stockService.updateQuantity(selectedStock._id, updateQuantity)
       const updatedStock = stock.map((item) =>
-        item._id === selectedStock._id
-          ? { ...item, quantity: updateQuantity }
-          : item
+        item._id === selectedStock._id ? { ...item, quantity: updateQuantity } : item,
       )
       setStock(updatedStock)
       setIsUpdateDialogOpen(false)
@@ -194,7 +219,9 @@ export default function StockPage() {
             }}
           >
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Add Stock</Button>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Add Stock
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -216,7 +243,7 @@ export default function StockPage() {
                   onUploadComplete={(imageUrl: string) => {
                     setNewStock({ ...newStock, imageUrl })
                     setIsUploadingImage(false)
-                    setUploadProgress(100) // You can customize this if using actual progress
+                    setUploadProgress(100)
                   }}
                   onUploadStart={() => {
                     setIsUploadingImage(true)
@@ -273,7 +300,9 @@ export default function StockPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
                 <Button
                   onClick={handleAddStock}
                   disabled={
@@ -323,50 +352,54 @@ export default function StockPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStock.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell>
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} className="h-12 w-12 object-cover rounded-md" />
-                      ) : (
-                        <div className="flex items-center justify-center h-12 w-12 bg-muted rounded-md">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell>{formatPrice(item.price)}</TableCell>
-                    <TableCell>
-                      {item.quantity === 0 ? (
-                        <span className="text-red-600 flex items-center gap-1">
-                          <AlertTriangle className="h-4 w-4" /> Out of stock
-                        </span>
-                      ) : (
-                        <span className="text-green-600">Available</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => openUpdateDialog(item)}>Edit Quantity</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteStock(item._id)} className="text-red-600">
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredStock.map((item) => {
+                  const stockStatus = getStockStatus(item.quantity)
+                  return (
+                    <TableRow key={item._id}>
+                      <TableCell>
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl || "/placeholder.svg"}
+                            alt={item.name}
+                            className="h-12 w-12 object-cover rounded-md"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-12 w-12 bg-muted rounded-md">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.unit}</TableCell>
+                      <TableCell>{formatPrice(item.price)}</TableCell>
+                      <TableCell>
+                        <Badge variant={stockStatus.variant} className="flex items-center gap-1 w-fit">
+                          {stockStatus.icon}
+                          {stockStatus.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => openUpdateDialog(item)}>Edit Quantity</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDeleteStock(item._id)} className="text-red-600">
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
@@ -399,7 +432,6 @@ export default function StockPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   )
-
 }

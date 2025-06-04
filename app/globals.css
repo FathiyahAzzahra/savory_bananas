@@ -87,6 +87,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -98,12 +99,15 @@
 }
 
 .logo-container {
-  background-color: #5d2a0c; /* Brown from logo */
-  color: #ffda44; /* Yellow from logo */
+  background-color: #5d2a0c;
+  /* Brown from logo */
+  color: #ffda44;
+  /* Yellow from logo */
 }
 
 .logo-accent {
-  color: #ffda44; /* Yellow from logo */
+  color: #ffda44;
+  /* Yellow from logo */
 }
 
 .badge-primary {
