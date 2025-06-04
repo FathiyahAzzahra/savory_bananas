@@ -14,7 +14,6 @@ import { useToast } from "@/components/ui/use-toast"
 import type { SalesReport, Order } from "@/lib/types"
 import { useSession } from "next-auth/react"
 
-
 export default function ReportsPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [reports, setReports] = useState<SalesReport[]>([])
@@ -57,6 +56,7 @@ export default function ReportsPage() {
 
     return monthlyData
   }
+
 
   useEffect(() => {
     const fetchOrdersForYear = async () => {
@@ -247,6 +247,7 @@ export default function ReportsPage() {
       ["Laporan Penjualan Bulan", monthStr],
       [],
       ["Total Sales", "Total Orders", "Average Order Value"],
+
       [
         formatRupiah(totalSalesCompleted),
         totalOrdersCompleted.toString(),
@@ -254,6 +255,7 @@ export default function ReportsPage() {
           ? formatRupiah(averageOrderValueCompleted)
           : "Rp 0,00",
       ],
+      
     ]
     
 
@@ -325,19 +327,23 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
 
+
           {userRole === "owner" ? (
             <button
               type="button"
               onClick={() => {
                 handleExport()
               }}
+
               className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 z-10"
             >
               Export Laporan
             </button>
+
           ) : (
             <p>User is not owner, export button hidden</p>
           )}
+
         </div>
       </div>
 

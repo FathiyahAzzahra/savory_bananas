@@ -1,31 +1,35 @@
-import mongoose, { type Document, type Model } from "mongoose"
+import mongoose from "mongoose"
 import bcrypt from "bcryptjs"
 
-export interface IUser extends Document {
-  name: string
-  username: string
-  password: string
-  role: "admin" | "owner"
-  comparePassword: (candidatePassword: string) => Promise<boolean>
-}
-
-const UserSchema = new mongoose.Schema<IUser>(
+const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "Please provide a name"],
-      trim: true,
-    },
+
     username: {
       type: String,
-      required: [true, "Please provide a username"],
+      required: true,
       unique: true,
       trim: true,
     },
     password: {
       type: String,
-      required: [true, "Please provide a password"],
-      minlength: 6,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    profileImageUrl: {
+      type: String,
     },
     role: {
       type: String,
@@ -37,7 +41,7 @@ const UserSchema = new mongoose.Schema<IUser>(
 )
 
 // Hash password before saving
-UserSchema.pre("save", async function (next) {
+userSchema.pre("save", async function (this: any, next: any) {
   if (!this.isModified("password")) return next()
 
   try {
@@ -50,11 +54,11 @@ UserSchema.pre("save", async function (next) {
 })
 
 // Compare password method
-UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function (candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password)
 }
 
-// Fix for "Cannot overwrite model once compiled" error
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", UserSchema)
+// Delete existing model to avoid OverwriteModelError
+delete mongoose.models.User
 
-export default User
+export default mongoose.model("User", userSchema)

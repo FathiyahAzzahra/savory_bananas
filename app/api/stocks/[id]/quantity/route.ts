@@ -5,7 +5,7 @@ import Stock from "@/models/Stock"
 import { authOptions } from "../../../auth/[...nextauth]/route"
 
 // Update stock quantity
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -16,12 +16,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await dbConnect()
 
     const { quantity } = await req.json()
+    const { id } = await params
+
 
     if (quantity === undefined) {
       return NextResponse.json({ error: "Quantity is required" }, { status: 400 })
     }
 
-    const stock = await Stock.findByIdAndUpdate(params.id, { quantity }, { new: true, runValidators: true })
+    const stock = await Stock.findByIdAndUpdate(id, { quantity }, { new: true, runValidators: true })
 
     if (!stock) {
       return NextResponse.json({ error: "Stock not found" }, { status: 404 })

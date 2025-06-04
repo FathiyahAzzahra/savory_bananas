@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react" // Import useSession dari next-auth
+import { useSession } from "next-auth/react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,16 +13,21 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MoreHorizontal, Search } from "lucide-react"
+import { Plus, MoreHorizontal, Search, Eye, CreditCard } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { orderService } from "@/lib/api-services"
+import { PaymentProofViewer } from "@/components/payment-proof-viewer"
+import { DebtPaymentForm } from "@/components/debt-payment-form"
+import { CancelOrderDialog } from "@/components/cancel-order-dialog"
+import { RejectPaymentDialog } from "@/components/reject-payment-dialog"
 import type { Order } from "@/lib/types"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { format } from "date-fns"
+import { id } from "date-fns/locale"
+
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -31,46 +37,51 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [paymentFilter, setPaymentFilter] = useState("all")
-  const { data: session } = useSession() // Mengambil session dari NextAuth.js
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(true)
 
-<<<<<<< Updated upstream
-=======
-  // Tambahan untuk modal upload completion proof
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  // New states for month and year filters
+  const currentMonth = format(new Date(), "MM")
+  const currentYear = format(new Date(), "yyyy")
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [selectedYear, setSelectedYear] = useState(currentYear)
 
+  // Dialog states
+  const [selectedProofUrl, setSelectedProofUrl] = useState("")
+  const [selectedOrderId, setSelectedOrderId] = useState("")
+  const [isProofViewerOpen, setIsProofViewerOpen] = useState(false)
+  const [isDebtPaymentOpen, setIsDebtPaymentOpen] = useState(false)
+  const [isCancelOrderOpen, setIsCancelOrderOpen] = useState(false)
+  const [isRejectPaymentOpen, setIsRejectPaymentOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
->>>>>>> Stashed changes
-  // Ambil role dari session, pastikan session sudah terambil
-  const userRole = session?.user?.role // Pastikan properti 'role' ada di session
+  const userRole = session?.user?.role
 
+  // Fetch orders based on selected month and year
   useEffect(() => {
-    // Fetch orders
-    const fetchOrders = async () => {
-      try {
-        setIsLoading(true)
-        const data = await orderService.getAll()
-        setOrders(data)
-        setFilteredOrders(data)
-      } catch (error) {
-        console.error("Failed to fetch orders:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load orders. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    fetchOrders(selectedYear, selectedMonth)
+  }, [selectedYear, selectedMonth, toast])
+
+  const fetchOrders = async (year: string, month: string) => {
+    try {
+      setIsLoading(true)
+      const data = await orderService.getAll(year, month)
+      setOrders(data)
+      setFilteredOrders(data)
+    } catch (error) {
+      console.error("Failed to fetch orders:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load orders. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    fetchOrders()
-  }, [toast])
-
+  // Client-side filtering for search, status, and payment status
   useEffect(() => {
-    // Filter orders based on search term and filters
     let result = orders
 
     if (searchTerm) {
@@ -165,6 +176,12 @@ export default function OrdersPage() {
             Completed
           </Badge>
         )
+      case "Cancelled":
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 font-medium">
+            Cancelled
+          </Badge>
+        )
       default:
         return (
           <Badge variant="outline" className="font-medium">
@@ -174,18 +191,165 @@ export default function OrdersPage() {
     }
   }
 
-  const getPaymentBadge = (status: string) => {
+  const handleViewPaymentProof = (imageUrl: string, orderId: string) => {
+    setSelectedProofUrl(imageUrl)
+    setSelectedOrderId(orderId || "")
+    setIsProofViewerOpen(true)
+  }
+
+  const handleDebtPayment = (order: Order) => {
+    // Check if order is cancelled
+    if (order.status === "Cancelled") {
+      toast({
+        title: "Cannot pay debt",
+        description: "This order has been cancelled and cannot be paid.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSelectedOrderId(order._id)
+    setIsDebtPaymentOpen(true)
+  }
+
+  const handleCancelOrder = (order: Order) => {
+    // Check if order is already cancelled
+    if (order.status === "Cancelled") {
+      toast({
+        title: "Cannot cancel order",
+        description: "This order is already cancelled.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if order is being sent
+    if (order.status === "Being Sent") {
+      toast({
+        title: "Cannot cancel order",
+        description: "Orders that are being sent cannot be cancelled.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if order is completed
+    if (order.status === "Completed") {
+      toast({
+        title: "Cannot cancel order",
+        description: "Completed orders cannot be cancelled.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if order is already paid
+    if (order.paymentStatus === "Paid") {
+      toast({
+        title: "Cannot cancel order",
+        description: "Paid orders cannot be cancelled.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if payment is pending verification
+    if (order.paymentStatus === "Pending Verification") {
+      toast({
+        title: "Cannot cancel order",
+        description:
+          "Orders with pending payment verification cannot be cancelled. Please approve or reject the payment first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Only allow cancelling debt orders with "Not Yet Processed" status
+    if (order.paymentStatus !== "Debt" || order.status !== "Not Yet Processed") {
+      toast({
+        title: "Cannot cancel order",
+        description: "Orders can only be cancelled when status is 'Not Yet Processed' and payment status is 'Debt'.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSelectedOrder(order)
+    setSelectedOrderId(order._id)
+    setIsCancelOrderOpen(true)
+  }
+
+  const handleRejectPayment = (orderId: string) => {
+    setSelectedOrderId(orderId)
+    setIsRejectPaymentOpen(true)
+  }
+
+  const getPaymentBadge = (status: string, paymentProofUrl?: string, receiptUrl?: string, orderId?: string) => {
+    const hasProof = paymentProofUrl || receiptUrl
+
     switch (status) {
       case "Paid":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 font-medium">
-            Paid
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="bg-green-100 text-green-800 border-green-300 font-medium cursor-pointer hover:bg-green-200"
+              onClick={() => hasProof && handleViewPaymentProof(paymentProofUrl || receiptUrl || "", orderId || "")}
+            >
+              Paid
+            </Badge>
+            {hasProof && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleViewPaymentProof(paymentProofUrl || receiptUrl || "", orderId || "")}
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         )
-      case "Not Yet Paid":
+      case "Debt":
+        return (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 font-medium">
+              Debt
+            </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const order = orders.find((o) => o._id === orderId)
+                if (order) handleDebtPayment(order)
+              }}
+            >
+              <CreditCard className="h-3 w-3" />
+            </Button>
+          </div>
+        )
+      case "Pending Verification":
+        return (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 font-medium">
+              Pending Verification
+            </Badge>
+            {paymentProofUrl && (
+              <Button size="sm" variant="ghost" onClick={() => handleViewPaymentProof(paymentProofUrl, orderId || "")}>
+                <Eye className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        )
+      case "Payment Rejected":
         return (
           <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 font-medium">
-            Not Yet Paid
+            Payment Rejected
+          </Badge>
+        )
+      case "Cancelled":
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300 font-medium">
+            Cancelled
           </Badge>
         )
       default:
@@ -201,15 +365,8 @@ export default function OrdersPage() {
     try {
       await orderService.updateStatus(orderId, status)
 
-      // Update local state
-      const updatedOrders = orders.map((order) => {
-        if (order._id === orderId) {
-          return { ...order, status }
-        }
-        return order
-      })
-
-      setOrders(updatedOrders)
+      // Re-fetch orders to ensure data consistency after status update
+      fetchOrders(selectedYear, selectedMonth)
 
       toast({
         title: "Status updated",
@@ -229,15 +386,8 @@ export default function OrdersPage() {
     try {
       await orderService.updatePaymentStatus(orderId, paymentStatus)
 
-      // Update local state
-      const updatedOrders = orders.map((order) => {
-        if (order._id === orderId) {
-          return { ...order, paymentStatus }
-        }
-        return order
-      })
-
-      setOrders(updatedOrders)
+      // Re-fetch orders to ensure data consistency after payment status update
+      fetchOrders(selectedYear, selectedMonth)
 
       toast({
         title: "Payment status updated",
@@ -261,9 +411,8 @@ export default function OrdersPage() {
     try {
       await orderService.delete(orderId)
 
-      // Update local state
-      const updatedOrders = orders.filter((order) => order._id !== orderId)
-      setOrders(updatedOrders)
+      // Re-fetch orders to ensure data consistency after deletion
+      fetchOrders(selectedYear, selectedMonth)
 
       toast({
         title: "Order deleted",
@@ -279,6 +428,28 @@ export default function OrdersPage() {
     }
   }
 
+  // Generate month options for the select input
+  const monthOptions = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const monthDate = new Date(2000, i, 1)
+      return {
+        value: (i + 1).toString().padStart(2, "0"),
+        label: format(monthDate, "MMMM", { locale: id }),
+      }
+    })
+  }, [])
+
+  // Generate year options for the select input (e.g., current year and past 2 years)
+  const yearOptions = useMemo(() => {
+    const currentYearNum = new Date().getFullYear()
+    const years = []
+    for (let i = 0; i < 3; i++) {
+      // Current year and past 2 years
+      years.push((currentYearNum - i).toString())
+    }
+    return years
+  }, [])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -286,7 +457,7 @@ export default function OrdersPage() {
           <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
           <p className="text-muted-foreground">Manage and track customer orders</p>
         </div>
-        {userRole === "admin" && (
+        {(userRole === "admin" || userRole === "owner") && (
           <Button onClick={() => router.push("/orders/new")}>
             <Plus className="mr-2 h-4 w-4" /> New Order
           </Button>
@@ -308,6 +479,32 @@ export default function OrdersPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            {/* New Month Filter */}
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter by month" />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* New Year Filter */}
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter by year" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
@@ -317,6 +514,7 @@ export default function OrdersPage() {
                 <SelectItem value="Not Yet Processed">Not Yet Processed</SelectItem>
                 <SelectItem value="Being Sent">Being Sent</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
@@ -326,7 +524,10 @@ export default function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">All Payments</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Not Yet Paid">Not Yet Paid</SelectItem>
+                <SelectItem value="Debt">Debt</SelectItem>
+                <SelectItem value="Pending Verification">Pending Verification</SelectItem>
+                <SelectItem value="Payment Rejected">Payment Rejected</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -367,61 +568,93 @@ export default function OrdersPage() {
                           onClick={() => router.push(`/orders/${order._id}`)}
                           className="text-primary underline hover:opacity-80 transition"
                         >
-                          {order._id}
+                          #{order._id.slice(-8)}
                         </button>
                       </TableCell>
                       <TableCell>{order.customerName}</TableCell>
                       <TableCell>{formatDate(order.createdAt)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
-                      <TableCell>{getPaymentBadge(order.paymentStatus)}</TableCell>
-<<<<<<< Updated upstream
-=======
-                      <TableCell>
-                        {order.paymentProofUrl ? (
-                          <a
-                            href={order.paymentProofUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 underline"
-                          >
-                            Lihat
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell> {/* ← PENUTUP yang sebelumnya hilang */}
 
                       <TableCell>
-                        {order.completionProofUrl ? (
-                          <a
-                            href={order.completionProofUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 underline"
-                          >
-                            Lihat
-                          </a>
-                        ) : (
-                          "-"
-                        )}
+                        {getPaymentBadge(order.paymentStatus, order.paymentProofUrl, order.receiptUrl, order._id)}
                       </TableCell>
 
->>>>>>> Stashed changes
                       <TableCell className="text-right">{formatPrice(order.totalPrice)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="link" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {userRole === "admin" && (
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}`)}>
+                              View Details
+                            </DropdownMenuItem>
+
+                            {order.status !== "Cancelled" && (
                               <>
-                                <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Completed")}>
-                                  Mark as Completed
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteOrder(order._id)}>Delete</DropdownMenuItem>
+                                {userRole === "admin" && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => router.push(`/orders/${order._id}/edit`)}>
+                                      Edit Order
+                                    </DropdownMenuItem>
+
+                                    {order.paymentStatus === "Pending Verification" && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => handleUpdatePaymentStatus(order._id, "Paid")}>
+                                          Approve Payment
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleRejectPayment(order._id)}>
+                                          Reject Payment
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+
+                                {(userRole === "admin" || userRole === "owner") && (
+                                  <>
+                                    {order.status === "Not Yet Processed" && (
+                                      <DropdownMenuItem
+                                        onClick={() => handleUpdateOrderStatus(order._id, "Being Sent")}
+                                      >
+                                        Mark as Being Sent
+                                      </DropdownMenuItem>
+                                    )}
+                                    {order.status === "Being Sent" && (
+                                      <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order._id, "Completed")}>
+                                        Mark as Completed
+                                      </DropdownMenuItem>
+                                    )}
+                                    {order.paymentStatus === "Pending Verification" && (
+                                      <DropdownMenuItem onClick={() => handleUpdatePaymentStatus(order._id, "Paid")}>
+                                        Mark as Paid
+                                      </DropdownMenuItem>
+                                    )}
+                                    {/* Only show cancel if order can be cancelled */}
+                                    {order.status === "Not Yet Processed" && order.paymentStatus === "Debt" && (
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => handleCancelOrder(order)}
+                                      >
+                                        Cancel Order
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleDeleteOrder(order._id)}
+                                    >
+                                      Delete Order
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+
+                                {/* Only show pay debt if not cancelled and status is debt */}
+                                {order.paymentStatus === "Debt" && (
+                                  <DropdownMenuItem onClick={() => handleDebtPayment(order)}>Pay Debt</DropdownMenuItem>
+                                )}
                               </>
                             )}
 
@@ -448,28 +681,38 @@ export default function OrdersPage() {
           </div>
         </CardContent>
       </Card>
-<<<<<<< Updated upstream
-=======
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="sm:max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Upload Completion Proof</DialogTitle>
-                      </DialogHeader>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*,application/pdf"
-                        onChange={handleFileChange}
-                        className="my-4"
-                      />
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
->>>>>>> Stashed changes
+
+      {/* Payment Proof Viewer */}
+      <PaymentProofViewer
+        isOpen={isProofViewerOpen}
+        onClose={() => setIsProofViewerOpen(false)}
+        imageUrl={selectedProofUrl}
+        orderId={selectedOrderId}
+      />
+
+      {/* Debt Payment Form */}
+      <DebtPaymentForm
+        isOpen={isDebtPaymentOpen}
+        onClose={() => setIsDebtPaymentOpen(false)}
+        orderId={selectedOrderId}
+        onPaymentSubmitted={() => fetchOrders(selectedYear, selectedMonth)}
+      />
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        isOpen={isCancelOrderOpen}
+        onClose={() => setIsCancelOrderOpen(false)}
+        orderId={selectedOrderId}
+        onOrderCancelled={() => fetchOrders(selectedYear, selectedMonth)}
+      />
+
+      {/* Reject Payment Dialog */}
+      <RejectPaymentDialog
+        isOpen={isRejectPaymentOpen}
+        onClose={() => setIsRejectPaymentOpen(false)}
+        orderId={selectedOrderId}
+        onPaymentRejected={() => fetchOrders(selectedYear, selectedMonth)}
+      />
     </div>
   )
 }

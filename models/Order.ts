@@ -1,4 +1,4 @@
-import mongoose, { type Document, type Model } from "mongoose"
+import mongoose from "mongoose"
 
 interface OrderProduct {
   productId: mongoose.Types.ObjectId
@@ -7,12 +7,26 @@ interface OrderProduct {
   price: number
 }
 
-export interface IOrder extends Document {
+interface Discount {
+  type: "nominal" | "percentage"
+  value: number
+  amount: number
+}
+
+export interface IOrder extends mongoose.Document {
   customerName: string
   products: OrderProduct[]
   totalPrice: number
-  status: "Not Yet Processed" | "Being Sent" | "Completed"
-  paymentStatus: "Paid" | "Not Yet Paid"
+  status: "Not Yet Processed" | "Being Sent" | "Completed" | "Cancelled"
+  paymentStatus: "Paid" | "Debt" | "Pending Verification" | "Payment Rejected" | "Cancelled"
+  paymentMethod?: "cash" | "transfer" | "debt"
+  paymentProofUrl?: string
+  receiptUrl?: string
+  discount?: Discount
+  cashReceived?: number
+  change?: number
+  receiptId?: string
+  cancellationReason?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -33,6 +47,24 @@ const OrderProductSchema = new mongoose.Schema({
     min: 1,
   },
   price: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+})
+
+const DiscountSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["nominal", "percentage"],
+    required: true,
+  },
+  value: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  amount: {
     type: Number,
     required: true,
     min: 0,
@@ -61,18 +93,48 @@ const OrderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Not Yet Processed", "Being Sent", "Completed"],
+      enum: ["Not Yet Processed", "Being Sent", "Completed", "Cancelled"],
       default: "Not Yet Processed",
     },
     paymentStatus: {
       type: String,
-      enum: ["Paid", "Not Yet Paid"],
-      default: "Not Yet Paid",
+      enum: ["Paid", "Debt", "Pending Verification", "Payment Rejected", "Cancelled"],
+      default: "Pending Verification",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "transfer", "debt"],
+    },
+    paymentProofUrl: {
+      type: String,
+    },
+    receiptUrl: {
+      type: String,
+    },
+    discount: {
+      type: DiscountSchema,
+      required: false,
+    },
+    cashReceived: {
+      type: Number,
+      min: 0,
+    },
+    change: {
+      type: Number,
+      min: 0,
+    },
+    receiptId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    cancellationReason: {
+      type: String,
     },
   },
   { timestamps: true },
 )
 
-const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
+const Order = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
 
 export default Order

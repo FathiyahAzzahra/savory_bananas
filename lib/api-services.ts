@@ -31,12 +31,48 @@ export const userService = {
   getById: async (id: string) => {
     return fetchAPI<any>(`/users/${id}`)
   },
+  delete: async (id: string) => {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "DELETE",
+    })
+    if (!res.ok) throw new Error("Failed to delete user")
+  },
+  update: async (id: string, userData: {
+    name: string
+    username: string
+    role: string
+  }) => {
+    return fetchAPI<any>(`/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    })
+  },
+  create: async (userData: {
+    name: string
+    username: string
+    password: string
+    role: string
+  }) => {
+    return fetchAPI<any>("/users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    })
+  },
 }
+
 
 // Order API services
 export const orderService = {
-  getAll: async () => {
-    return fetchAPI<any[]>("/orders")
+  getAll: async (year?: string, month?: string) => {
+    let endpoint = "/orders"
+    const params = new URLSearchParams()
+    if (year) params.append("year", year)
+    if (month) params.append("month", month)
+
+    if (params.toString()) {
+      endpoint += `?${params.toString()}`
+    }
+    return fetchAPI<any[]>(endpoint)
   },
   getById: async (id: string) => {
     return fetchAPI<any>(`/orders/${id}`)
@@ -67,10 +103,42 @@ export const orderService = {
       body: JSON.stringify({ status }),
     })
   },
-  updatePaymentStatus: async (id: string, paymentStatus: string) => {
+
+  // Pastikan fungsi updatePaymentStatus mengirimkan reason dengan benar
+
+  // Ubah fungsi updatePaymentStatus:
+  updatePaymentStatus: async (id: string, paymentStatus: string, reason?: string) => {
     return fetchAPI<any>(`/orders/${id}/payment-status`, {
       method: "PATCH",
-      body: JSON.stringify({ paymentStatus }),
+      body: JSON.stringify({ paymentStatus, reason }),
+    })
+  },
+  updateReceiptUrl: async (id: string, receiptUrl: string) => {
+    console.log("Updating receipt URL for order:", id, receiptUrl)
+    return fetchAPI<any>(`/orders/${id}/receipt`, {
+      method: "PATCH",
+      body: JSON.stringify({ receiptUrl }),
+    })
+  },
+  cancelOrder: async (id: string, reason?: string) => {
+    return fetchAPI<any>(`/orders/${id}/cancel`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    })
+  },
+  submitDebtPayment: async (id: string, paymentProofUrl: string) => {
+    return fetchAPI<any>(`/orders/${id}/debt-payment`, {
+      method: "PATCH",
+      body: JSON.stringify({ paymentProofUrl }),
+    })
+  },
+  submitDebtPaymentCash: async (
+    id: string,
+    paymentData: { cashReceived: number; change: number; receiptUrl: string },
+  ) => {
+    return fetchAPI<any>(`/orders/${id}/debt-payment`, {
+      method: "POST",
+      body: JSON.stringify(paymentData),
     })
   },
 }

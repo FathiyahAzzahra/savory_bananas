@@ -5,7 +5,7 @@ import Order from "@/models/Order"
 import { authOptions } from "../../auth/[...nextauth]/route"
 
 // Get order by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Update order
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -45,9 +45,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await dbConnect()
 
     const { customerName, products, totalPrice, status, paymentStatus } = await req.json()
+    const { id } = await params
+
 
     const order = await Order.findByIdAndUpdate(
-      params.id,
+      id,
       {
         customerName,
         products,
@@ -70,7 +72,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Delete order
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -84,7 +86,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     await dbConnect()
 
-    const order = await Order.findByIdAndDelete(params.id)
+    const { id } = await params
+    const order = await Order.findByIdAndDelete(id)
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })

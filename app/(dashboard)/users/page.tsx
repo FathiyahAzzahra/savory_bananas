@@ -38,6 +38,26 @@ export default function UsersPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    const confirmDelete = confirm("Are you sure you want to delete this user?")
+    if (!confirmDelete) return
+
+    try {
+      await userService.delete(id)
+      toast({
+        title: "Success",
+        description: "User deleted successfully.",
+      })
+      fetchUsers()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete user.",
+        variant: "destructive",
+      })
+    }
+  }
+
   useEffect(() => {
     if (userRole === "owner") {
       fetchUsers()
@@ -66,10 +86,9 @@ export default function UsersPage() {
         <p className="text-muted-foreground">Manage system users and their roles</p>
       </div>
 
-      {/* Add User button */}
       <div className="flex justify-end">
-        <Link href="/signup">
-          <Button className="bg-primary text-white">Add User</Button>
+        <Link href="/users/adduser">
+          <Button className="bg-primary text-white">Add Admin</Button>
         </Link>
       </div>
 
@@ -85,18 +104,19 @@ export default function UsersPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                       Loading users...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -125,6 +145,18 @@ export default function UsersPage() {
                         >
                           {user.role}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Link href={`/users/edituser/${user._id}`}>
+                          <Button variant="outline" size="sm">Edit</Button>
+                        </Link>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(user._id)}
+                        >
+                          Delete
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

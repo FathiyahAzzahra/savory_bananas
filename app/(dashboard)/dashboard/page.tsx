@@ -2,12 +2,38 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ShoppingCart, CheckCircle, Clock, TruckIcon, DollarSign, AlertCircle, Calendar } from "lucide-react"
+import {
+  ShoppingCart,
+  CheckCircle,
+  Clock,
+  TruckIcon,
+  DollarSign,
+  AlertCircle,
+  Calendar,
+  TrendingUp,
+} from "lucide-react"
 import { orderService } from "@/lib/api-services"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns"
 import { id } from "date-fns/locale"
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts"
 
 export default function DashboardPage() {
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -16,10 +42,17 @@ export default function DashboardPage() {
     pendingOrders: 0,
     completedOrders: 0,
     inDeliveryOrders: 0,
+    cancelledOrders: 0,
     paidOrders: 0,
     unpaidOrders: 0,
+    debtOrders: 0,
+    totalRevenue: 0,
+    totalDebt: 0,
+    successRate: 0,
   })
+  const [topProducts, setTopProducts] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [monthlyTrend, setMonthlyTrend] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
 
@@ -41,34 +74,108 @@ export default function DashboardPage() {
         const startDate = startOfMonth(selectedMonth)
         const endDate = endOfMonth(selectedMonth)
 
-        const filteredOrders = orders.filter((order) => {
+        const filteredOrders = orders.filter((order: { createdAt: string | number | Date }) => {
           const orderDate = new Date(order.createdAt)
           return orderDate >= startDate && orderDate <= endDate
         })
 
-        // Calculate stats
+        // Calculate basic stats
         const totalOrders = filteredOrders.length
-        const pendingOrders = filteredOrders.filter((order) => order.status === "Not Yet Processed").length
-        const inDeliveryOrders = filteredOrders.filter((order) => order.status === "Being Sent").length
-        const completedOrders = filteredOrders.filter((order) => order.status === "Completed").length
-        const paidOrders = filteredOrders.filter((order) => order.paymentStatus === "Paid").length
-        const unpaidOrders = filteredOrders.filter((order) => order.paymentStatus === "Not Yet Paid").length
+        const pendingOrders = filteredOrders.filter((order: { status: string }) => order.status === "Not Yet Processed").length
+        const inDeliveryOrders = filteredOrders.filter((order: { status: string }) => order.status === "Being Sent").length
+        const completedOrders = filteredOrders.filter((order: { status: string }) => order.status === "Completed").length
+        const cancelledOrders = filteredOrders.filter((order: { status: string }) => order.status === "Cancelled").length
+        const paidOrders = filteredOrders.filter((order: { paymentStatus: string }) => order.paymentStatus === "Paid").length
+        const unpaidOrders = filteredOrders.filter(
+          (order: { paymentStatus: string }) => order.paymentStatus === "Not Yet Paid" || order.paymentStatus === "Pending Verification",
+        ).length
+        const debtOrders = filteredOrders.filter((order: { paymentStatus: string }) => order.paymentStatus === "Debt").length
+
+        // Calculate revenue and debt
+        const totalRevenue = filteredOrders
+          .filter((order: { paymentStatus: string }) => order.paymentStatus === "Paid")
+          .reduce((sum: any, order: { totalPrice: any }) => sum + order.totalPrice, 0)
+
+        const totalDebt = filteredOrders
+          .filter((order: { paymentStatus: string }) => order.paymentStatus === "Debt")
+          .reduce((sum: any, order: { totalPrice: any }) => sum + order.totalPrice, 0)
+
+        // Calculate success rate (completed orders / total orders)
+        const successRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0
 
         setStats({
           totalOrders,
           pendingOrders,
           completedOrders,
           inDeliveryOrders,
+          cancelledOrders,
           paidOrders,
           unpaidOrders,
+          debtOrders,
+          totalRevenue,
+          totalDebt,
+          successRate,
         })
 
-        // Get recent activity (last 3 orders) for the selected month
+        // Calculate top products
+        const productCount: Record<string, { name: string; count: number; revenue: number }> = {}
+        filteredOrders.forEach((order: { products: { name: string; quantity: number; price: number }[] }) => {
+          order.products.forEach((product: { name: string; quantity: number; price: number }) => {
+            if (productCount[product.name]) {
+              productCount[product.name].count += product.quantity
+              productCount[product.name].revenue += product.price * product.quantity
+            } else {
+              productCount[product.name] = {
+                name: product.name,
+                count: product.quantity,
+                revenue: product.price * product.quantity,
+              }
+            }
+          })
+        })
+
+        const topProductsArray = Object.values(productCount)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5)
+          .map((product, index) => ({
+            ...product,
+            fill: `hsl(${index * 72}, 70%, 50%)`,
+            shortName: product.name.length > 12 ? product.name.substring(0, 12) + "..." : product.name,
+          }))
+
+        setTopProducts(topProductsArray)
+
+        // Get recent activity (last 5 orders) for the selected month
         const sortedOrders = [...filteredOrders]
           .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 3)
+          .slice(0, 5)
 
         setRecentActivity(sortedOrders)
+
+        // Calculate monthly trend (last 6 months)
+        const monthlyData = []
+        for (let i = 5; i >= 0; i--) {
+          const monthDate = subMonths(new Date(), i)
+          const monthStart = startOfMonth(monthDate)
+          const monthEnd = endOfMonth(monthDate)
+
+          const monthOrders = orders.filter((order: { createdAt: string | number | Date }) => {
+            const orderDate = new Date(order.createdAt)
+            return orderDate >= monthStart && orderDate <= monthEnd
+          })
+
+          const monthRevenue = monthOrders
+            .filter((order: { paymentStatus: string }) => order.paymentStatus === "Paid")
+            .reduce((sum: any, order: { totalPrice: any }) => sum + order.totalPrice, 0)
+
+          monthlyData.push({
+            month: format(monthDate, "MMM", { locale: id }),
+            orders: monthOrders.length,
+            revenue: monthRevenue,
+          })
+        }
+
+        setMonthlyTrend(monthlyData)
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error)
       } finally {
@@ -89,20 +196,26 @@ export default function DashboardPage() {
         )
       case "Being Sent":
         return (
-          <div className="rounded-full bg-secondary/20 p-2">
-            <TruckIcon className="h-4 w-4 text-secondary-foreground" />
+          <div className="rounded-full bg-blue-100 p-2">
+            <TruckIcon className="h-4 w-4 text-blue-600" />
           </div>
         )
       case "Not Yet Processed":
         return (
-          <div className="rounded-full bg-primary/20 p-2">
-            <Clock className="h-4 w-4 text-primary" />
+          <div className="rounded-full bg-yellow-100 p-2">
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </div>
+        )
+      case "Cancelled":
+        return (
+          <div className="rounded-full bg-red-100 p-2">
+            <AlertCircle className="h-4 w-4 text-red-600" />
           </div>
         )
       default:
         return (
-          <div className="rounded-full bg-muted p-2">
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          <div className="rounded-full bg-gray-100 p-2">
+            <ShoppingCart className="h-4 w-4 text-gray-600" />
           </div>
         )
     }
@@ -111,13 +224,15 @@ export default function DashboardPage() {
   const getActivityText = (order: any) => {
     switch (order.status) {
       case "Completed":
-        return `Order #${order._id} completed`
+        return `Order #${order._id.slice(-6)} completed`
       case "Being Sent":
-        return `Order #${order._id} is being delivered`
+        return `Order #${order._id.slice(-6)} is being delivered`
       case "Not Yet Processed":
-        return `New order #${order._id} received`
+        return `New order #${order._id.slice(-6)} received`
+      case "Cancelled":
+        return `Order #${order._id.slice(-6)} was cancelled`
       default:
-        return `Order #${order._id} updated`
+        return `Order #${order._id.slice(-6)} updated`
     }
   }
 
@@ -140,6 +255,14 @@ export default function DashboardPage() {
     }
   }
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
   // Generate last 6 months for selection
   const getMonthOptions = () => {
     const options = []
@@ -154,6 +277,21 @@ export default function DashboardPage() {
   }
 
   const monthOptions = getMonthOptions()
+
+  // Data for order status pie chart
+  const orderStatusData = [
+    { name: "Completed", value: stats.completedOrders, fill: "#22c55e" },
+    { name: "In Delivery", value: stats.inDeliveryOrders, fill: "#3b82f6" },
+    { name: "Pending", value: stats.pendingOrders, fill: "#eab308" },
+    { name: "Cancelled", value: stats.cancelledOrders, fill: "#ef4444" },
+  ].filter((item) => item.value > 0)
+
+  // Data for payment status pie chart
+  const paymentStatusData = [
+    { name: "Paid", value: stats.paidOrders, fill: "#22c55e" },
+    { name: "Debt", value: stats.debtOrders, fill: "#f59e0b" },
+    { name: "Unpaid", value: stats.unpaidOrders, fill: "#ef4444" },
+  ].filter((item) => item.value > 0)
 
   if (isLoading) {
     return (
@@ -173,8 +311,8 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedMonth.toISOString()} onValueChange={(value) => setSelectedMonth(new Date(value))}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select month" />
+            <SelectTrigger className="w-[180px] border-gray-200">
+              <SelectValue>{format(selectedMonth, "MMMM yyyy", { locale: id })}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {monthOptions.map((option) => (
@@ -187,111 +325,196 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList className="bg-muted">
-          <TabsTrigger value="orders" className="font-medium">
-            Orders
-          </TabsTrigger>
-          <TabsTrigger value="payments" className="font-medium">
-            Payments
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="orders" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalOrders}</div>
-                <p className="text-xs text-muted-foreground">{format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-                <Clock className="h-4 w-4 text-secondary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-                <p className="text-xs text-muted-foreground">Waiting to be processed</p>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">In Delivery</CardTitle>
-                <TruckIcon className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.inDeliveryOrders}</div>
-                <p className="text-xs text-muted-foreground">Currently being delivered</p>
-              </CardContent>
-            </Card>
-            <Card className="md:col-span-2 lg:col-span-3 border-primary/20">
-              <CardHeader className="border-b">
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Your recent order processing activity for {format(selectedMonth, "MMMM yyyy", { locale: id })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {recentActivity.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-4">No recent activity</p>
-                  ) : (
-                    recentActivity.map((order) => (
-                      <div key={order._id} className="flex items-center gap-4 rounded-lg border p-4">
-                        {getActivityIcon(order)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{getActivityText(order)}</p>
-                          <p className="text-xs text-muted-foreground">{formatTimeAgo(order.updatedAt)}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="payments" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Paid Orders</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.paidOrders}</div>
-                <p className="text-xs text-muted-foreground">{format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unpaid Orders</CardTitle>
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.unpaidOrders}</div>
-                <p className="text-xs text-muted-foreground">Awaiting payment</p>
-              </CardContent>
-            </Card>
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Payment Rate</CardTitle>
-                <DollarSign className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.totalOrders > 0 ? Math.round((stats.paidOrders / stats.totalOrders) * 100) : 0}%
-                </div>
-                <p className="text-xs text-muted-foreground">Of orders are paid</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">{format(selectedMonth, "MMMM yyyy", { locale: id })}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-green-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">From paid orders</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Debt</CardTitle>
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{formatCurrency(stats.totalDebt)}</div>
+            <p className="text-xs text-muted-foreground">Outstanding payments</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.successRate}%</div>
+            <p className="text-xs text-muted-foreground">Orders completed</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Order Status Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Order Status</CardTitle>
+            <CardDescription>Distribution of order statuses</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={orderStatusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {orderStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} orders`, "Quantity"]} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Payment Status Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Payment Status</CardTitle>
+            <CardDescription>Distribution of payment statuses</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={paymentStatusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {paymentStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} orders`, "Quantity"]} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Top Products - Radar Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Top Products</CardTitle>
+            <CardDescription>Most ordered products</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart outerRadius={90} data={topProducts}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="shortName" />
+                <PolarRadiusAxis />
+                <Radar name="Quantity" dataKey="count" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                <Tooltip
+                  formatter={(value, name, props) => {
+                    const product = props.payload
+                    return [`${value} units`, product.name]
+                  }}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Trend and Recent Activity */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Monthly Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Trend</CardTitle>
+            <CardDescription>Orders and revenue over the last 6 months</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value, name) => [
+                    name === "revenue" ? formatCurrency(value as number) : value,
+                    name === "revenue" ? "Revenue" : "Orders",
+                  ]}
+                />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="orders" stroke="#8884d8" name="Orders" />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#82ca9d" name="Revenue" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Latest order updates for {format(selectedMonth, "MMMM yyyy", { locale: id })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px] overflow-y-auto">
+            <div className="space-y-4">
+              {recentActivity.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No recent activity</p>
+              ) : (
+                recentActivity.map((order) => (
+                  <div key={order._id} className="flex items-center gap-4 rounded-lg border p-4">
+                    {getActivityIcon(order)}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{getActivityText(order)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.customerName} • {formatCurrency(order.totalPrice)} • {formatTimeAgo(order.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
