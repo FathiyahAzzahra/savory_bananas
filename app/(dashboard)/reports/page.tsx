@@ -255,9 +255,9 @@ export default function ReportsPage() {
           ? formatRupiah(averageOrderValueCompleted)
           : "Rp 0,00",
       ],
-      
+
     ]
-    
+
 
     // Header CSV order history
     const ordersCsv = [
@@ -287,18 +287,18 @@ export default function ReportsPage() {
 
     // Buat blob dan link download
     try {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.setAttribute("download", `laporan-${format(selectedMonth, "yyyy-MM")}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  } catch (error) {
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", `laporan-${format(selectedMonth, "yyyy-MM")}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
 
+    }
   }
-}
 
 
   return (
@@ -340,9 +340,7 @@ export default function ReportsPage() {
               Export Laporan
             </button>
 
-          ) : (
-            <p>User is not owner, export button hidden</p>
-          )}
+          ) : null}
 
         </div>
       </div>
